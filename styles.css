@@ -976,3 +976,33 @@ body {
 }
 
 /* remove force transparency override */
+
+/* Time input styling */
+input[type="time"] {
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid #667eea;
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 16px;
+    color: #1a202c;
+    width: 100%;
+    transition: all 0.3s ease;
+}
+
+input[type="time"]:focus {
+    outline: none;
+    border-color: #764ba2;
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 0 15px rgba(102, 126, 234, 0.3);
+    transform: scale(1.02);
+}
+
+input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.5);
+    cursor: pointer;
+    padding: 4px;
+}
+
+input[type="time"]::-webkit-calendar-picker-indicator:hover {
+    filter: invert(0.7);
+}
