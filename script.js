@@ -5,21 +5,31 @@ function showNotification(message, type = 'success') {
 
 // API base - supports localhost and Netlify
 function resolveApiBase() {
+    console.log('🔍 Resolving API base...');
+    console.log('📍 Current hostname:', location.hostname);
+    
     // For local development, use localhost:3000
     if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+        console.log('🏠 Using localhost for development');
         return 'http://localhost:3000';
     }
+    
     // For Netlify/production, use the meta tag
     const meta = document.querySelector('meta[name="api-base"]');
+    console.log('🏷️ Meta tag found:', meta);
     if (meta && meta.content && meta.content.trim().length > 0) {
-        return meta.content.trim().replace(/\/$/, '');
+        const apiBase = meta.content.trim().replace(/\/$/, '');
+        console.log('🌐 Using meta tag API base:', apiBase);
+        return apiBase;
     }
+    
     // Fallback
+    console.log('🔄 Using fallback API base');
     return 'https://cab-9wdp.onrender.com';
 }
 
 const API_BASE = resolveApiBase();
-console.log('🌐 API_BASE resolved to:', API_BASE);
+console.log('🌐 Final API_BASE resolved to:', API_BASE);
 console.log('📍 Current location:', location.href);
 
 // Admin credentials
@@ -33,6 +43,7 @@ async function handleBookingSubmission(formData, formType) {
     try {
         console.log('🚀 Starting booking submission...');
         console.log('📤 Form data:', formData);
+        console.log('🌐 Calling API URL:', `${API_BASE}/api/bookings`);
         
         showNotification('Submitting booking...', 'info');
         
@@ -142,6 +153,7 @@ function handleAdminLogin(e) {
 async function loadAdminBookings() {
     try {
         console.log('🔄 Loading admin bookings...');
+        console.log('🌐 Calling API URL:', `${API_BASE}/api/bookings`);
         
         const response = await fetch(`${API_BASE}/api/bookings`);
         
