@@ -26,6 +26,7 @@
                 <li><a href="#home">HOME</a></li>
                 <li><a href="#booking">BOOK A CAB</a></li>
                 <li><a href="#popular-routes">SERVICE LOCATIONS</a></li>
+                <li><a href="#reviews">REVIEWS</a></li>
                 <li><a href="#" id="adminLoginBtn">ADMIN LOGIN</a></li>
             </ul>
         </div>
@@ -407,6 +408,97 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Reviews Section -->
+    <section id="reviews" class="reviews-section">
+        <div class="container">
+            <h2 class="section-title">Customer Reviews & Ratings</h2>
+            <div class="reviews-container">
+                <div class="reviews-header">
+                    <div class="average-rating">
+                        <div class="rating-display">
+                            <span class="rating-number" id="averageRating">0.0</span>
+                            <div class="stars" id="averageStars">
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                            </div>
+                            <span class="rating-text">Average Rating</span>
+                        </div>
+                    </div>
+                    <button class="review-btn" onclick="openReviewModal()">
+                        <i class="fas fa-plus"></i> Write a Review
+                    </button>
+                </div>
+                
+                <div class="reviews-list" id="reviewsList">
+                    <div class="loading-reviews">
+                        <i class="fas fa-spinner fa-spin"></i> Loading reviews...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Review Modal -->
+    <div id="reviewModal" class="modal">
+        <div class="modal-content review-modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-star"></i> Write a Review</h2>
+                <span class="close" onclick="closeReviewModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="reviewForm">
+                    <div class="form-group">
+                        <label for="customerName">Your Name:</label>
+                        <input type="text" id="customerName" name="customerName" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="serviceType">Service Type:</label>
+                        <select id="serviceType" name="serviceType" required>
+                            <option value="">Select Service</option>
+                            <option value="Airport">Airport Transfer</option>
+                            <option value="Local">Local Trip</option>
+                            <option value="Outstation">Outstation Trip</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Rating:</label>
+                        <div class="rating-input">
+                            <input type="radio" id="star5" name="rating" value="5" required>
+                            <label for="star5"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="star4" name="rating" value="4">
+                            <label for="star4"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="star3" name="rating" value="3">
+                            <label for="star3"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="star2" name="rating" value="2">
+                            <label for="star2"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="star1" name="rating" value="1">
+                            <label for="star1"><i class="fas fa-star"></i></label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="comment">Your Review:</label>
+                        <textarea id="comment" name="comment" rows="4" maxlength="500" placeholder="Share your experience with AVB Cabs..." required></textarea>
+                        <div class="char-count">
+                            <span id="charCount">0</span>/500 characters
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="submit-btn">
+                            <i class="fas fa-paper-plane"></i> Submit Review
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

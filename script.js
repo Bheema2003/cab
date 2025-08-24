@@ -324,6 +324,186 @@ async function deleteBooking(id) {
     }
 }
 
+// Review System Functions
+function openReviewModal() {
+    const modal = document.getElementById('reviewModal');
+    if (modal) {
+        modal.style.display = 'block';
+        // Reset form
+        const form = document.getElementById('reviewForm');
+        if (form) form.reset();
+        updateCharCount();
+    }
+}
+
+function closeReviewModal() {
+    const modal = document.getElementById('reviewModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function updateCharCount() {
+    const textarea = document.getElementById('comment');
+    const charCount = document.getElementById('charCount');
+    if (textarea && charCount) {
+        charCount.textContent = textarea.value.length;
+    }
+}
+
+async function submitReview(e) {
+    e.preventDefault();
+    
+    const formData = {
+        customerName: document.getElementById('customerName').value,
+        serviceType: document.getElementById('serviceType').value,
+        rating: parseInt(document.querySelector('input[name="rating"]:checked')?.value || 0),
+        comment: document.getElementById('comment').value
+    };
+    
+    // Validation
+    if (!formData.customerName.trim()) {
+        showNotification('Please enter your name.', 'error');
+        return;
+    }
+    
+    if (!formData.serviceType) {
+        showNotification('Please select a service type.', 'error');
+        return;
+    }
+    
+    if (!formData.rating) {
+        showNotification('Please select a rating.', 'error');
+        return;
+    }
+    
+    if (!formData.comment.trim()) {
+        showNotification('Please enter your review.', 'error');
+        return;
+    }
+    
+    try {
+        showNotification('Submitting review...', 'info');
+        
+        const response = await fetch(`${API_BASE}/api/reviews`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Thank you for your review!', 'success');
+            closeReviewModal();
+            loadReviews(); // Reload reviews
+        } else {
+            throw new Error(result.message || 'Failed to submit review');
+        }
+    } catch (error) {
+        console.error('❌ Error submitting review:', error);
+        showNotification(`Review submission failed: ${error.message}`, 'error');
+    }
+}
+
+async function loadReviews() {
+    try {
+        const response = await fetch(`${API_BASE}/api/reviews`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            displayReviews(data.reviews, data.averageRating);
+        } else {
+            throw new Error(data.message || 'Failed to load reviews');
+        }
+    } catch (error) {
+        console.error('❌ Error loading reviews:', error);
+        const container = document.getElementById('reviewsList');
+        if (container) {
+            container.innerHTML = `<div class="error">Failed to load reviews: ${error.message}</div>`;
+        }
+    }
+}
+
+function displayReviews(reviews, averageRating) {
+    const container = document.getElementById('reviewsList');
+    const averageRatingEl = document.getElementById('averageRating');
+    const averageStarsEl = document.getElementById('averageStars');
+    
+    if (!container) return;
+    
+    // Update average rating
+    if (averageRatingEl) {
+        averageRatingEl.textContent = averageRating.toFixed(1);
+    }
+    
+    if (averageStarsEl) {
+        averageStarsEl.innerHTML = '';
+        for (let i = 1; i <= 5; i++) {
+            const star = document.createElement('i');
+            star.className = 'fas fa-star';
+            star.style.color = i <= averageRating ? '#ffd700' : '#e2e8f0';
+            averageStarsEl.appendChild(star);
+        }
+    }
+    
+    if (reviews.length === 0) {
+        container.innerHTML = `
+            <div class="no-reviews">
+                <i class="fas fa-star" style="font-size: 3rem; color: #e2e8f0; margin-bottom: 20px;"></i>
+                <h3>No reviews yet</h3>
+                <p>Be the first to share your experience with AVB Cabs!</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const reviewsHTML = reviews.map(review => {
+        const stars = Array.from({ length: 5 }, (_, i) => 
+            `<i class="fas fa-star" style="color: ${i < review.rating ? '#ffd700' : '#e2e8f0'}"></i>`
+        ).join('');
+        
+        const avatar = review.customerName.charAt(0).toUpperCase();
+        const date = new Date(review.createdAt).toLocaleDateString();
+        
+        return `
+            <div class="review-card">
+                <div class="review-header">
+                    <div class="reviewer-info">
+                        <div class="reviewer-avatar">${avatar}</div>
+                        <div class="reviewer-details">
+                            <h4>${review.customerName}</h4>
+                            <div class="service-type">${review.serviceType}</div>
+                        </div>
+                    </div>
+                    <div class="review-rating">
+                        ${stars}
+                    </div>
+                </div>
+                <div class="review-content">
+                    ${review.comment}
+                </div>
+                <div class="review-date">
+                    ${date}
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    container.innerHTML = reviewsHTML;
+}
+
 // Wait for DOM to be loaded
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded successfully');
@@ -420,4 +600,27 @@ document.addEventListener('DOMContentLoaded', function() {
             if (navMenu) navMenu.classList.remove('active');
         });
     });
+
+    // Review form functionality
+    const reviewForm = document.getElementById('reviewForm');
+    if (reviewForm) {
+        reviewForm.addEventListener('submit', submitReview);
+    }
+
+    // Character count for review textarea
+    const commentTextarea = document.getElementById('comment');
+    if (commentTextarea) {
+        commentTextarea.addEventListener('input', updateCharCount);
+    }
+
+    // Close review modal when clicking outside
+    window.addEventListener('click', function(e) {
+        const reviewModal = document.getElementById('reviewModal');
+        if (e.target === reviewModal) {
+            closeReviewModal();
+        }
+    });
+
+    // Load reviews on page load
+    loadReviews();
 }); 
