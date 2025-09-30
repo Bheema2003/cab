@@ -1367,3 +1367,61 @@ input[type="time"] {
     color: var(--avb-text);
 }
 input[type="time"]:focus { border-color: rgba(96,165,250,.8); background: rgba(2,6,23,0.65); box-shadow: 0 10px 30px rgba(96,165,250,.2); transform: none; }
+
+/* =============================================
+   Animated Background (inspired by Netlify deploy)
+   Subtle moving gradient blobs behind all content
+   ============================================= */
+html, body { position: relative; }
+body::before,
+body::after {
+    content: "";
+    position: fixed;
+    inset: -25%;
+    z-index: -1;
+    pointer-events: none;
+    will-change: transform, opacity, filter;
+}
+
+/* Main soft gradient field with slow parallax drift */
+body::before {
+    background:
+        radial-gradient(40% 40% at 15% 20%, rgba(96,165,250,0.25) 0%, rgba(96,165,250,0) 60%),
+        radial-gradient(35% 35% at 85% 25%, rgba(139,92,246,0.22) 0%, rgba(139,92,246,0) 60%),
+        radial-gradient(45% 45% at 20% 85%, rgba(16,185,129,0.18) 0%, rgba(16,185,129,0) 65%),
+        radial-gradient(30% 30% at 75% 80%, rgba(244,114,182,0.16) 0%, rgba(244,114,182,0) 65%);
+    filter: blur(40px) saturate(115%);
+    animation: avbGradientDrift 28s ease-in-out infinite alternate;
+    opacity: 0.9;
+}
+
+/* Accent blob layer with a different tempo for depth */
+body::after {
+    background:
+        radial-gradient(30% 30% at 60% 35%, rgba(59,130,246,0.18) 0%, rgba(59,130,246,0) 65%),
+        radial-gradient(25% 25% at 35% 60%, rgba(168,85,247,0.18) 0%, rgba(168,85,247,0) 65%),
+        radial-gradient(22% 22% at 70% 70%, rgba(234,179,8,0.14) 0%, rgba(234,179,8,0) 65%);
+    filter: blur(55px) saturate(110%);
+    mix-blend-mode: screen;
+    animation: avbBlobFloat 36s ease-in-out infinite alternate;
+    opacity: 0.6;
+}
+
+@keyframes avbGradientDrift {
+    0%   { transform: translate3d(0,   0, 0) scale(1.0); }
+    50%  { transform: translate3d(-3%, 2%, 0) scale(1.03); }
+    100% { transform: translate3d(3%, -2%, 0) scale(1.02); }
+}
+
+@keyframes avbBlobFloat {
+    0%   { transform: translate3d(0%, 0%, 0) rotate(0.001deg); }
+    33%  { transform: translate3d(2.5%, -1.5%, 0) rotate(0.001deg); }
+    66%  { transform: translate3d(-2%, 2%, 0) rotate(0.001deg); }
+    100% { transform: translate3d(1.5%, -1%, 0) rotate(0.001deg); }
+}
+
+/* Reduce intensity on small screens for performance */
+@media (max-width: 768px) {
+    body::before { opacity: 0.7; filter: blur(36px) saturate(110%); }
+    body::after  { opacity: 0.45; filter: blur(48px) saturate(105%); }
+}
