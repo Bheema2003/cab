@@ -1378,7 +1378,7 @@ body::after {
     content: "";
     position: fixed;
     inset: -25%;
-    z-index: -1;
+    z-index: 0; /* ensure above base background but below content */
     pointer-events: none;
     will-change: transform, opacity, filter;
 }
