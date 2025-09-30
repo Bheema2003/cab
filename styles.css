@@ -1437,7 +1437,8 @@ body::after {
         radial-gradient(35% 35% at 90% 20%, rgba(139,92,246,0.22) 0%, rgba(139,92,246,0) 60%),
         radial-gradient(45% 45% at 20% 90%, rgba(16,185,129,0.18) 0%, rgba(16,185,129,0) 65%),
         radial-gradient(30% 30% at 80% 85%, rgba(244,114,182,0.16) 0%, rgba(244,114,182,0) 65%);
-    filter: blur(42px) saturate(115%);
+    filter: blur(60px) saturate(125%);
+    mix-blend-mode: screen;
     animation: avbGradientDrift 30s ease-in-out infinite alternate;
 }
 
