@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Optional: set your Google Maps Places API key here; update content to your key -->
+    <meta name="google-maps-api-key" content="">
     <!-- Backend API base for Netlify/production. Set to your deployed backend origin, e.g., https://your-backend.example.com -->
     <meta name="api-base" content="https://cab-9wdp.onrender.com">
     <title>AVB CABS</title>
@@ -47,7 +49,7 @@
                         <div class="contact-info">
                             <h3>Contact</h3>
                             <p><i class="fab fa-whatsapp"></i> 9591128048</p>
-                            <p><i class="fab fa-whatsapp"></i> 8073166031</p>
+                            <p><i class="fab fa-whatsapp"></i> 9380725515</p>
                             <p><i class="fab fa-whatsapp"></i> 7338653351</p>
                         </div>
                         <div class="terms">*Terms and condition Apply</div>
@@ -64,7 +66,7 @@
                         <div class="contact-info">
                             <h3>Contact</h3>
                             <p><i class="fab fa-whatsapp"></i> 9591128048</p>
-                            <p><i class="fab fa-whatsapp"></i> 8073166031</p>
+                            <p><i class="fab fa-whatsapp"></i> 9380725515</p>
                             <p><i class="fab fa-whatsapp"></i> 7338653351</p>
                         </div>
                         <div class="terms">*Terms and condition Apply</div>
@@ -85,7 +87,7 @@
                         <div class="contact-info">
                             <h3>Contact</h3>
                             <p><i class="fab fa-whatsapp"></i> 9591128048</p>
-                            <p><i class="fab fa-whatsapp"></i> 8073166031</p>
+                            <p><i class="fab fa-whatsapp"></i> 9380725515</p>
                             <p><i class="fab fa-whatsapp"></i> 7338653351</p>
                         </div>
                     </div>
@@ -112,15 +114,15 @@
                     <i class="fas fa-plane"></i>
                     <span>AIRPORT</span>
                 </button>
-                <button class="booking-tab disabled" data-type="local" disabled>
+                <button class="booking-tab" data-type="local">
                     <i class="fas fa-clock"></i>
                     <span>LOCAL - HOURLY</span>
                 </button>
-                <button class="booking-tab disabled" data-type="oneway" disabled>
+                <button class="booking-tab" data-type="oneway">
                     <i class="fas fa-arrow-right"></i>
                     <span>ONE WAY</span>
                 </button>
-                <button class="booking-tab disabled" data-type="roundtrip" disabled>
+                <button class="booking-tab" data-type="roundtrip">
                     <i class="fas fa-exchange-alt"></i>
                     <span>ROUND TRIP</span>
                 </button>
@@ -131,15 +133,21 @@
     <!-- Booking Form Section -->
     <section id="booking" class="booking-section">
         <div class="container">
-            <!-- Airport Booking Form -->
-            <form id="airportForm" class="booking-form active">
+            <div class="booking-grid">
+                <!-- Airport Booking Form -->
+                <form id="airportForm" class="booking-form active">
+                <div class="form-group">
+                    <label for="airportCustomerName">Your Name:</label>
+                    <input type="text" id="airportCustomerName" name="customerName" placeholder="Enter your name" required>
+                </div>
+
                 <div class="form-group">
                     <label for="airportPickupFrom">Pickup Location:</label>
                     <div class="input-group">
                         <input type="text" id="airportPickupFrom" name="pickupFrom" placeholder="Enter pickup location" required>
                     </div>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="airportDestination">Drop Location:</label>
                     <div class="input-group">
@@ -163,7 +171,6 @@
                         </div>
                     </div>
                 </div>
-                
                 <div class="form-group">
                     <label for="airportContactNumber">Contact Number:</label>
                     <input type="tel" id="airportContactNumber" name="contactNumber" placeholder="Enter your contact number" required>
@@ -173,7 +180,145 @@
                     <i class="fas fa-search"></i>
                     FIND CAB NEAR ME
                 </button>
-            </form>
+                </form>
+
+                <!-- Local Hourly Form -->
+                <form id="localForm" class="booking-form">
+                    <div class="form-group">
+                        <label for="localCustomerName">Your Name:</label>
+                        <input type="text" id="localCustomerName" placeholder="Enter your name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="localPickupFrom">Pickup From:</label>
+                        <input type="text" id="localPickupFrom" placeholder="Enter Pickup Location">
+                    </div>
+                    <div class="form-group">
+                        <label for="localDestination">To:</label>
+                        <div class="input-group">
+                            <input type="text" id="localDestination" placeholder="Enter a location">
+                            <button type="button" class="swap-btn"><i class="fas fa-exchange-alt"></i></button>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="localPickupDate">Pickup Date:</label>
+                            <input type="date" id="localPickupDate">
+                        </div>
+                        <div class="form-group">
+                            <label for="localPickupTime">Pickup Time:</label>
+                            <input type="time" id="localPickupTime">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="localLandmark">Landmark for pickup (Optional)</label>
+                        <textarea id="localLandmark" placeholder="(Optional)"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="localContactNumber">Contact Number:</label>
+                        <input type="tel" id="localContactNumber" placeholder="Enter your contact number" required>
+                    </div>
+                    <button type="submit" class="submit-btn">FIND A CAB FOR ME</button>
+                </form>
+
+                <!-- One Way Form -->
+                <form id="onewayForm" class="booking-form">
+                    <div class="form-group">
+                        <label for="onewayCustomerName">Your Name:</label>
+                        <input type="text" id="onewayCustomerName" placeholder="Enter your name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="onewayPickupFrom">Pickup From:</label>
+                        <input type="text" id="onewayPickupFrom" placeholder="Enter Pickup Location">
+                    </div>
+                    <div class="form-group">
+                        <label for="onewayDestination">To:</label>
+                        <div class="input-group">
+                            <input type="text" id="onewayDestination" placeholder="Enter a location">
+                            <button type="button" class="swap-btn"><i class="fas fa-exchange-alt"></i></button>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="onewayPickupDate">Pickup Date:</label>
+                            <input type="date" id="onewayPickupDate">
+                        </div>
+                        <div class="form-group">
+                            <label for="onewayPickupTime">Pickup Time:</label>
+                            <input type="time" id="onewayPickupTime">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="onewayLandmark">Landmark for pickup (Optional)</label>
+                        <textarea id="onewayLandmark" placeholder="(Optional)"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="onewayContactNumber">Contact Number:</label>
+                        <input type="tel" id="onewayContactNumber" placeholder="Enter your contact number" required>
+                    </div>
+                    <button type="submit" class="submit-btn">FIND A CAB FOR ME</button>
+                </form>
+
+                <!-- Round Trip Form -->
+                <form id="roundtripForm" class="booking-form">
+                    <div class="form-group">
+                        <label for="roundCustomerName">Your Name:</label>
+                        <input type="text" id="roundCustomerName" placeholder="Enter your name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="roundPickupFrom">Pickup From:</label>
+                        <input type="text" id="roundPickupFrom" placeholder="Enter Pickup Location">
+                    </div>
+                    <div class="form-group">
+                        <label for="roundDestination">To:</label>
+                        <div class="input-group">
+                            <input type="text" id="roundDestination" placeholder="Enter a location">
+                            <button type="button" class="swap-btn"><i class="fas fa-exchange-alt"></i></button>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="roundPickupDate">Pickup Date:</label>
+                            <input type="date" id="roundPickupDate">
+                        </div>
+                        <div class="form-group">
+                            <label for="roundPickupTime">Pickup Time:</label>
+                            <input type="time" id="roundPickupTime">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="roundReturnDate">Return Date:</label>
+                        <input type="date" id="roundReturnDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="roundLandmark">Landmark for pickup (Optional)</label>
+                        <textarea id="roundLandmark" placeholder="(Optional)"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="roundContactNumber">Contact Number:</label>
+                        <input type="tel" id="roundContactNumber" placeholder="Enter your contact number" required>
+                    </div>
+                    <button type="submit" class="submit-btn">FIND A CAB FOR ME</button>
+                </form>
+
+                <!-- Right panel: benefits & help -->
+                <aside class="booking-aside">
+                    <div class="benefits-card">
+                        <h3><i class="fas fa-shield-alt"></i> Why book with AVB</h3>
+                        <ul>
+                            <li><i class="fas fa-check"></i> On‑time pickup guarantee</li>
+                            <li><i class="fas fa-check"></i> Professional drivers</li>
+                            <li><i class="fas fa-check"></i> 24x7 support on WhatsApp</li>
+                            <li><i class="fas fa-check"></i> Transparent pricing</li>
+                        </ul>
+                    </div>
+                    <div class="help-card">
+                        <h3><i class="fas fa-phone"></i> Need help?</h3>
+                        <p>Call or WhatsApp us for instant assistance.</p>
+                        <a href="tel:9591128048" class="help-btn"><i class="fas fa-phone"></i> 9591128048</a>
+                        <a href="https://wa.me/9591128048" target="_blank" class="help-btn whatsapp"><i class="fab fa-whatsapp"></i> Chat on WhatsApp</a>
+                    </div>
+                </aside>
+            </div>
         </div>
     </section>
 
@@ -504,15 +649,15 @@
     </div>
 
     <div class="floating-icons">
-        <a href="https://wa.me/918073166031" class="floating-icon whatsapp" target="_blank">
+        <a href="https://wa.me/919591128048" class="floating-icon whatsapp" target="_blank">
             <i class="fab fa-whatsapp"></i>
         </a>
-        <a href="tel:8073166031" class="floating-icon phone">
+        <a href="tel:9591128048" class="floating-icon phone">
             <i class="fas fa-phone"></i>
         </a>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=6"></script>
     
     <!-- Popup and Notification Styles -->
     <style>
@@ -807,6 +952,19 @@
             font-style: italic;
         }
         
+        .delete-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .delete-btn:hover {
+            background: #dc2626;
+        }
+        
         .popup-content h3 {
             margin: 0;
             color: #f8fafc;
@@ -968,6 +1126,10 @@
         // Form validation
         function validateBookingForm(data, formType) {
             if (formType === 'Airport') {
+                if (!data.customerName || data.customerName.trim() === '') {
+                    showNotification('Please enter your name.', 'error');
+                    return false;
+                }
                 if (!data.pickupFrom || data.pickupFrom.trim() === '') {
                     showNotification('Please enter pickup location.', 'error');
                     return false;

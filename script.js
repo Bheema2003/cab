@@ -14,6 +14,15 @@ function resolveApiBase() {
         return 'http://localhost:3000';
     }
     
+    // If running on Netlify or a custom production domain, prefer same-origin
+    // so that Netlify `_redirects` can proxy `/api/*` to the backend and avoid CORS
+    const isNetlify = location.hostname.endsWith('.netlify.app');
+    const isProdDomain = location.hostname.endsWith('avbcabs.com') || location.hostname.endsWith('www.avbcabs.com');
+    if (isNetlify || isProdDomain) {
+        console.log('🛰️ Detected Netlify/prod domain; using same-origin proxy for API');
+        return '';
+    }
+
     // For Netlify/production, use the meta tag
     const meta = document.querySelector('meta[name="api-base"]');
     console.log('🏷️ Meta tag found:', meta);
@@ -204,6 +213,7 @@ function displayAdminBookings(bookings) {
         <table class="bookings-table">
             <thead>
                 <tr>
+                    <th>Name</th>
                     <th>Service Type</th>
                     <th>From</th>
                     <th>To</th>
@@ -211,6 +221,7 @@ function displayAdminBookings(bookings) {
                     <th>Time</th>
                     <th>Contact</th>
                     <th>Created</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -222,6 +233,7 @@ function displayAdminBookings(bookings) {
         
         tableHTML += `
             <tr>
+                <td>${booking.customerName || '-'}</td>
                 <td><strong>${booking.serviceType}</strong></td>
                 <td>${booking.pickupFrom}</td>
                 <td>${booking.destination}</td>
@@ -229,6 +241,9 @@ function displayAdminBookings(bookings) {
                 <td>${booking.pickupTime}</td>
                 <td>${booking.contactNumber}</td>
                 <td>${createdDate}</td>
+                <td>
+                    <button class="delete-btn" data-id="${booking._id || booking.id}">Delete</button>
+                </td>
             </tr>
         `;
     });
@@ -239,6 +254,15 @@ function displayAdminBookings(bookings) {
     `;
 
     container.innerHTML = tableHTML;
+
+    // Wire up delete buttons
+    const deleteButtons = container.querySelectorAll('.delete-btn');
+    deleteButtons.forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const id = e.currentTarget.getAttribute('data-id');
+            await deleteBooking(id);
+        });
+    });
 }
 
 // Update admin statistics
@@ -352,7 +376,7 @@ function updateCharCount() {
 }
 
 async function submitReview(e) {
-    e.preventDefault();
+            e.preventDefault();
     
     const formData = {
         customerName: document.getElementById('customerName').value,
@@ -507,31 +531,256 @@ function displayReviews(reviews, averageRating) {
 // Wait for DOM to be loaded
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded successfully');
+    // Hero slider init
+    (function initHeroSlider(){
+        const slides = Array.from(document.querySelectorAll('.hero-section .slide'));
+        const indicators = Array.from(document.querySelectorAll('.slider-indicators .indicator'));
+        if (!slides.length) return;
+        let current = 0;
+        let timerId;
+        function showSlide(i){
+            slides.forEach((s,idx)=> s.classList.toggle('active', idx===i));
+            indicators.forEach((d,idx)=> d.classList.toggle('active', idx===i));
+            current = i;
+        }
+        function next(){ showSlide((current+1)%slides.length); }
+        function start(){ stop(); timerId = setInterval(next, 3000); }
+        function stop(){ if(timerId) clearInterval(timerId); }
+        indicators.forEach((dot,idx)=> dot.addEventListener('click', ()=>{ showSlide(idx); start(); }));
+        const hero = document.querySelector('.hero-section');
+        if (hero){ hero.addEventListener('mouseenter', stop); hero.addEventListener('mouseleave', start); }
+        showSlide(0); start();
+    })();
     
+    // Google Places (manual-only unless key present)
+    const GOOGLE_MAPS_API_KEY = (document.querySelector('meta[name="google-maps-api-key"]')?.content || '').trim();
+
+    function loadGoogleMapsPlacesApi() {
+        return new Promise((resolve, reject) => {
+            if (window.google && window.google.maps && window.google.maps.places) {
+                resolve(window.google);
+                return;
+            }
+            if (!GOOGLE_MAPS_API_KEY) {
+                console.warn('Google Maps API key not provided. Autocomplete disabled.');
+                resolve(null);
+                return;
+            }
+            const existing = document.getElementById('gmaps-places');
+            if (existing) {
+                existing.addEventListener('load', () => resolve(window.google));
+                existing.addEventListener('error', reject);
+                return;
+            }
+            const script = document.createElement('script');
+            script.id = 'gmaps-places';
+            script.async = true;
+            script.defer = true;
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}&libraries=places&loading=async`;
+            script.onload = () => resolve(window.google);
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+
+    function initPlacesAutocomplete() {
+        try {
+            const pickupInput = document.getElementById('airportPickupFrom');
+            const dropInput = document.getElementById('airportDestination');
+            if (!(window.google && window.google.maps && window.google.maps.places)) return;
+            if (!pickupInput || !dropInput) return;
+
+            const options = {
+                fields: ['formatted_address', 'geometry', 'name', 'place_id'],
+                types: ['geocode'],
+                componentRestrictions: { country: ['in'] }
+            };
+            const pickupAutocomplete = new google.maps.places.Autocomplete(pickupInput, options);
+            const dropAutocomplete = new google.maps.places.Autocomplete(dropInput, options);
+
+            pickupAutocomplete.addListener('place_changed', () => {
+                const place = pickupAutocomplete.getPlace();
+                if (place && place.formatted_address) pickupInput.value = place.formatted_address;
+            });
+            dropAutocomplete.addListener('place_changed', () => {
+                const place = dropAutocomplete.getPlace();
+                if (place && place.formatted_address) dropInput.value = place.formatted_address;
+            });
+
+            // Prevent Enter key from prematurely submitting the form while selecting from suggestions
+            [pickupInput, dropInput].forEach((el) => {
+                el.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') e.preventDefault();
+                });
+            });
+        } catch (e) {
+            console.error('Failed to init Places Autocomplete:', e);
+        }
+    }
+
+    loadGoogleMapsPlacesApi().then(() => {
+        initPlacesAutocomplete();
+    }).catch((err) => {
+        console.error('Google Maps API load error:', err);
+    });
+
     // Airport form submission
     const airportForm = document.getElementById('airportForm');
+    const localForm = document.getElementById('localForm');
+    const onewayForm = document.getElementById('onewayForm');
+    const roundtripForm = document.getElementById('roundtripForm');
     console.log('🔍 Looking for airportForm:', airportForm);
     
     if (airportForm) {
+        // Enforce date/time constraints (no past date; time not in past when date is today)
+        const dateInput = document.getElementById('airportPickupDate');
+        const timeInput = document.getElementById('airportPickupTime');
+
+        function toYMD(d){
+            const y = d.getFullYear();
+            const m = String(d.getMonth()+1).padStart(2,'0');
+            const dd = String(d.getDate()).padStart(2,'0');
+            return `${y}-${m}-${dd}`;
+        }
+        function toHM(d){
+            const hh = String(d.getHours()).padStart(2,'0');
+            const mm = String(d.getMinutes()).padStart(2,'0');
+            return `${hh}:${mm}`;
+        }
+        function updateConstraints(){
+            if (!dateInput || !timeInput) return;
+            const now = new Date();
+            const todayStr = toYMD(now);
+            dateInput.min = todayStr;
+            if (!dateInput.value || dateInput.value < todayStr){
+                // keep user value but UI prevents selecting past
+            }
+            if (dateInput.value === todayStr){
+                timeInput.min = toHM(now);
+            } else {
+                timeInput.removeAttribute('min');
+            }
+        }
+        updateConstraints();
+        if (dateInput){
+            dateInput.addEventListener('change', updateConstraints);
+        }
+        // Inject Name field if missing (for deployed pages with cached HTML)
+        if (!document.getElementById('airportCustomerName')) {
+            const contactGroup = document.getElementById('airportContactNumber')?.closest('.form-group');
+            const destinationGroup = document.getElementById('airportDestination')?.closest('.form-group');
+            const nameGroup = document.createElement('div');
+            nameGroup.className = 'form-group';
+            nameGroup.innerHTML = `
+                <label for="airportCustomerName">Your Name:</label>
+                <input type="text" id="airportCustomerName" name="customerName" placeholder="Enter your name" required>
+            `;
+            // Place it after pickup location, before drop location if possible
+            if (destinationGroup && destinationGroup.parentNode) {
+                destinationGroup.parentNode.insertBefore(nameGroup, destinationGroup);
+            } else if (contactGroup && contactGroup.parentNode) {
+                contactGroup.parentNode.insertBefore(nameGroup, contactGroup);
+            } else {
+                airportForm.insertBefore(nameGroup, airportForm.querySelector('.submit-btn'));
+            }
+        }
         console.log('✅ Found airportForm, adding submit listener');
         airportForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             console.log('📝 Form submitted!');
             
+            const nameInputEl = document.getElementById('airportCustomerName');
             const bookingData = {
                 pickupFrom: document.getElementById('airportPickupFrom').value,
                 destination: document.getElementById('airportDestination').value,
                 pickupDate: document.getElementById('airportPickupDate').value,
                 pickupTime: document.getElementById('airportPickupTime').value,
+                customerName: nameInputEl ? nameInputEl.value : '',
                 contactNumber: document.getElementById('airportContactNumber').value
             };
             
             console.log('📊 Form data:', bookingData);
+
+            // Validate fields before submitting
+            if (typeof validateBookingForm === 'function') {
+                const valid = validateBookingForm(bookingData, 'Airport');
+                if (!valid) return;
+            }
             await handleBookingSubmission(bookingData, 'Airport');
         });
     } else {
         console.error('❌ airportForm not found!');
     }
+
+    // Tab switching
+    document.querySelectorAll('.booking-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.booking-tab').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const type = btn.getAttribute('data-type');
+            document.querySelectorAll('.booking-form').forEach(f => f.classList.remove('active'));
+            if (type === 'airport') document.getElementById('airportForm').classList.add('active');
+            if (type === 'local') document.getElementById('localForm').classList.add('active');
+            if (type === 'oneway') document.getElementById('onewayForm').classList.add('active');
+            if (type === 'roundtrip') document.getElementById('roundtripForm').classList.add('active');
+        });
+    });
+
+    function gatherAndSubmitLocal(e){
+        e.preventDefault();
+        const data = {
+            pickupFrom: document.getElementById('localPickupFrom').value,
+            destination: document.getElementById('localDestination').value,
+            pickupDate: document.getElementById('localPickupDate').value,
+            pickupTime: document.getElementById('localPickupTime').value,
+            customerName: document.getElementById('localCustomerName')?.value || document.getElementById('airportCustomerName')?.value || '',
+            contactNumber: document.getElementById('localContactNumber')?.value || document.getElementById('airportContactNumber')?.value || ''
+        };
+        if (typeof validateBookingForm === 'function') {
+            const valid = validateBookingForm(data, 'Local');
+            if (!valid) return;
+        }
+        handleBookingSubmission(data, 'Local');
+    }
+
+    function gatherAndSubmitOneway(e){
+        e.preventDefault();
+        const data = {
+            pickupFrom: document.getElementById('onewayPickupFrom').value,
+            destination: document.getElementById('onewayDestination').value,
+            pickupDate: document.getElementById('onewayPickupDate').value,
+            pickupTime: document.getElementById('onewayPickupTime').value,
+            customerName: document.getElementById('onewayCustomerName')?.value || document.getElementById('airportCustomerName')?.value || '',
+            contactNumber: document.getElementById('onewayContactNumber')?.value || document.getElementById('airportContactNumber')?.value || ''
+        };
+        if (typeof validateBookingForm === 'function') {
+            const valid = validateBookingForm(data, 'One Way');
+            if (!valid) return;
+        }
+        handleBookingSubmission(data, 'One Way');
+    }
+
+    function gatherAndSubmitRound(e){
+        e.preventDefault();
+        const data = {
+            pickupFrom: document.getElementById('roundPickupFrom').value,
+            destination: document.getElementById('roundDestination').value,
+            pickupDate: document.getElementById('roundPickupDate').value,
+            pickupTime: document.getElementById('roundPickupTime').value,
+            returnDate: document.getElementById('roundReturnDate').value,
+            customerName: document.getElementById('roundCustomerName')?.value || document.getElementById('airportCustomerName')?.value || '',
+            contactNumber: document.getElementById('roundContactNumber')?.value || document.getElementById('airportContactNumber')?.value || ''
+        };
+        if (typeof validateBookingForm === 'function') {
+            const valid = validateBookingForm(data, 'Round Trip');
+            if (!valid) return;
+        }
+        handleBookingSubmission(data, 'Round Trip');
+    }
+
+    if (localForm) localForm.addEventListener('submit', gatherAndSubmitLocal);
+    if (onewayForm) onewayForm.addEventListener('submit', gatherAndSubmitOneway);
+    if (roundtripForm) roundtripForm.addEventListener('submit', gatherAndSubmitRound);
 
     // Admin login button
     const adminLoginBtn = document.getElementById('adminLoginBtn');
@@ -575,12 +824,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const adminLoginModal = document.getElementById('adminLoginModal');
         const adminDashboardModal = document.getElementById('adminDashboardModal');
         
-        if (e.target === adminLoginModal) {
-            closeAdminLoginModal();
-        }
-        if (e.target === adminDashboardModal) {
-            closeAdminDashboard();
-        }
+        if (e.target === adminLoginModal) closeAdminLoginModal();
+        if (e.target === adminDashboardModal) closeAdminDashboard();
     });
 
     // Mobile navigation
@@ -603,24 +848,70 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Review form functionality
     const reviewForm = document.getElementById('reviewForm');
-    if (reviewForm) {
-        reviewForm.addEventListener('submit', submitReview);
-    }
+    if (reviewForm) reviewForm.addEventListener('submit', submitReview);
 
     // Character count for review textarea
     const commentTextarea = document.getElementById('comment');
-    if (commentTextarea) {
-        commentTextarea.addEventListener('input', updateCharCount);
-    }
+    if (commentTextarea) commentTextarea.addEventListener('input', updateCharCount);
 
     // Close review modal when clicking outside
     window.addEventListener('click', function(e) {
         const reviewModal = document.getElementById('reviewModal');
-        if (e.target === reviewModal) {
-            closeReviewModal();
-        }
+        if (e.target === reviewModal) closeReviewModal();
     });
 
     // Load reviews on page load
     loadReviews();
+
+    // --- New booking notifications (admin/user side) ---
+    const NOTIFY_KEY = 'avb_last_notified_booking_time';
+    function playChime(){
+        try{
+            const ctx = new (window.AudioContext||window.webkitAudioContext)();
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.type = 'sine';
+            o.frequency.value = 880; // A5
+            g.gain.value = 0.001; // very soft
+            o.connect(g); g.connect(ctx.destination);
+            o.start();
+            setTimeout(()=>{o.stop();ctx.close();}, 300);
+        }catch(_){/* ignore */}
+    }
+
+    async function requestDesktopPermission(){
+        try {
+            if ('Notification' in window && Notification.permission === 'default') {
+                await Notification.requestPermission();
+            }
+        } catch(_){}
+    }
+
+    async function checkNewBookingsAndNotify(){
+        try{
+            const res = await fetch(`${API_BASE}/api/bookings`);
+            if(!res.ok) return;
+            const data = await res.json();
+            if(!data.success || !Array.isArray(data.bookings)) return;
+            if(data.bookings.length === 0) return;
+            const latest = data.bookings[0]; // server returns sorted desc
+            const latestTime = new Date(latest.createdAt).getTime();
+            const last = parseInt(localStorage.getItem(NOTIFY_KEY) || '0', 10);
+            if (latestTime > last){
+                // Update marker first to avoid duplicate spam
+                localStorage.setItem(NOTIFY_KEY, String(latestTime));
+                showNotification(`New booking: ${latest.pickupFrom} → ${latest.destination} at ${latest.pickupTime}`, 'success');
+                playChime();
+                if ('Notification' in window && Notification.permission === 'granted'){
+                    new Notification('AVB Cabs - New Booking', { body: `${latest.pickupFrom} → ${latest.destination} • ${latest.pickupDate} ${latest.pickupTime}` });
+                }
+            }
+        }catch(_){/* network errors ignored */}
+    }
+
+    requestDesktopPermission();
+    // Start polling every 20s
+    setInterval(checkNewBookingsAndNotify, 20000);
+    // Run once at startup
+    checkNewBookingsAndNotify();
 }); 

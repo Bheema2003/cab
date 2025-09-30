@@ -326,9 +326,28 @@ body {
     right: 20px;
 }
 
-/* Slider Indicators - Hidden */
+/* Slider Indicators - visible */
 .slider-indicators {
-    display: none;
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    z-index: 3;
+}
+.slider-indicators .indicator {
+    width: 10px;
+    height: 10px;
+    background: rgba(255,255,255,0.35);
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    cursor: pointer;
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+.slider-indicators .indicator.active {
+    background: #ffffff;
+    transform: scale(1.15);
 }
 
 /* Booking Types */
@@ -401,6 +420,13 @@ body {
     padding: 50px 0;
 }
 
+.booking-grid{
+    display:grid;
+    grid-template-columns: 1.2fr .8fr;
+    gap:32px;
+    align-items:start;
+}
+
 .booking-form {
     max-width: 600px;
     margin: 0 auto;
@@ -420,6 +446,15 @@ body {
     opacity: 1;
     transform: translateY(0);
 }
+
+.booking-aside{ position:relative; display:flex; flex-direction:column; gap:20px; }
+.benefits-card, .help-card{ background:#ffffff; border:1px solid rgba(102,126,234,0.25); border-radius:16px; padding:20px; box-shadow:0 10px 25px rgba(0,0,0,0.06); }
+.benefits-card h3, .help-card h3{ color:#1a202c; display:flex; align-items:center; gap:10px; margin-bottom:12px; font-size:1.1rem; }
+.benefits-card ul{ list-style:none; display:grid; gap:10px; }
+.benefits-card li{ display:flex; align-items:center; gap:8px; color:#374151; }
+.benefits-card i.fa-check{ color:#10b981; }
+.help-btn{ display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:10px; background:linear-gradient(135deg,#667eea,#764ba2); color:#fff; text-decoration:none; margin-right:10px; box-shadow:0 6px 16px rgba(102,126,234,.3); }
+.help-btn.whatsapp{ background:linear-gradient(135deg,#25d366,#128c7e); }
 
 .form-group {
     margin-bottom: 20px;
@@ -1239,3 +1274,96 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
         justify-content: center;
     }
 }
+
+/* =============================================
+   AVB Theme v2: Glass + Dark Gradient + Pro Colors
+   (Overrides below take precedence over earlier styles)
+   ============================================= */
+:root {
+    --avb-bg1: #0f172a; /* slate-900 */
+    --avb-bg2: #111827; /* gray-900 */
+    --avb-text: #e5e7eb; /* gray-200 */
+    --avb-muted: #94a3b8; /* slate-400 */
+    --avb-primary1: #60a5fa; /* blue-400 */
+    --avb-primary2: #8b5cf6; /* violet-500 */
+    --avb-stroke: rgba(255,255,255,0.08);
+}
+
+body {
+    color: var(--avb-text);
+    background: radial-gradient(1200px 600px at 10% -10%, rgba(96,165,250,.18), transparent 60%),
+                radial-gradient(900px 500px at 110% 10%, rgba(139,92,246,.15), transparent 60%),
+                linear-gradient(180deg, var(--avb-bg1), var(--avb-bg2));
+}
+
+.navbar {
+    background: linear-gradient(135deg, rgba(96,165,250,.25) 0%, rgba(139,92,246,.25) 100%);
+    backdrop-filter: saturate(160%) blur(10px);
+    -webkit-backdrop-filter: saturate(160%) blur(10px);
+    border-bottom: 1px solid var(--avb-stroke);
+}
+.logo-text, .nav-menu a { color:#fff; }
+.checkerboard-pattern { background: linear-gradient(90deg, rgba(96,165,250,.35), rgba(139,92,246,.35)); }
+
+.hero-section { background: linear-gradient(135deg, rgba(2,6,23,0.6) 0%, rgba(15,23,42,0.9) 70%); }
+.slide-text h1 { -webkit-text-fill-color:#fff; color:#fff; text-shadow:0 10px 35px rgba(0,0,0,.55); }
+
+.booking-types { background: transparent; }
+.booking-tab { background: linear-gradient(135deg, rgba(96,165,250,.18), rgba(139,92,246,.18)); color:#e5e7eb; border:2px solid rgba(96,165,250,.35); }
+.booking-tab.active, .booking-tab:hover { background: linear-gradient(135deg, rgba(96,165,250,.28), rgba(139,92,246,.28)); box-shadow:0 10px 30px rgba(96,165,250,.35); border-color:#60a5fa; }
+.booking-tab i { color:#e5e7eb; }
+
+.booking-section { background: transparent; }
+.booking-form {
+    background: linear-gradient(135deg, rgba(30,41,59,0.55), rgba(17,24,39,0.45));
+    border: 1px solid var(--avb-stroke);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.35);
+}
+.form-group label { color: var(--avb-text); }
+.input-group input, .input-group textarea, .input-group select {
+    background: rgba(15,23,42,0.35);
+    color: var(--avb-text);
+    border: 1px solid rgba(148,163,184,.35);
+    border-radius: 14px;
+    padding: 14px 14px;
+}
+.input-group input::placeholder, .input-group textarea::placeholder { color: var(--avb-muted); }
+.input-group input:focus, .input-group textarea:focus, .input-group select:focus {
+    border-color: rgba(96,165,250,.8);
+    background: rgba(2,6,23,0.65);
+    box-shadow: 0 10px 30px rgba(96,165,250,.2);
+    transform: none;
+}
+.swap-btn { background: linear-gradient(135deg, var(--avb-primary1) 0%, var(--avb-primary2) 100%); }
+.submit-btn { background: linear-gradient(135deg, var(--avb-primary1) 0%, var(--avb-primary2) 100%); }
+.submit-btn:hover { box-shadow: 0 18px 40px rgba(96,165,250,0.35); background: linear-gradient(135deg, var(--avb-primary2) 0%, var(--avb-primary1) 100%); }
+
+.benefits-card, .help-card { background: linear-gradient(135deg, rgba(17,24,39,0.45), rgba(15,23,42,0.55)); border:1px solid var(--avb-stroke); color: var(--avb-text); }
+.benefits-card li { color: var(--avb-muted); }
+.help-btn { background: linear-gradient(135deg, var(--avb-primary1), var(--avb-primary2)); }
+
+.why-choose-us { background: linear-gradient(135deg, rgba(17,24,39,.75) 0%, rgba(15,23,42,.85) 100%); border-top:1px solid var(--avb-stroke); border-bottom:1px solid var(--avb-stroke); }
+.footer { background: linear-gradient(180deg, rgba(2,6,23,0.85), rgba(15,23,42,0.95)); border-top:1px solid var(--avb-stroke); }
+
+/* Strict no-white surfaces overrides */
+.reviews-section { background: transparent; }
+.review-card { background: rgba(15,23,42,0.6); color: var(--avb-text); border-left: 4px solid var(--avb-primary1); box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+.route-column, .footer-section, .info-item { background: linear-gradient(135deg, rgba(17,24,39,.55), rgba(15,23,42,.65)); color: var(--avb-text); border: 1px solid var(--avb-stroke); }
+.popular-routes { background: linear-gradient(135deg, rgba(96,165,250,.25) 0%, rgba(139,92,246,.25) 100%); border: 1px solid var(--avb-stroke); }
+.route-column h4, .footer-section h3, .info-item h3 { color: var(--avb-text); }
+.route-column ul li { color: var(--avb-text); border-bottom: 1px solid rgba(255,255,255,0.06); }
+.go-to-top, .footer a { color: #93c5fd; }
+
+/* Hero small elements */
+.car, .car-illustration, .polaroid { background: linear-gradient(135deg, rgba(17,24,39,.55), rgba(15,23,42,.65)); }
+.polaroid span { color: var(--avb-text); }
+
+/* Inputs (including time) to dark glass */
+input[type="time"] {
+    background: rgba(15,23,42,0.35);
+    border: 1px solid rgba(148,163,184,.35);
+    color: var(--avb-text);
+}
+input[type="time"]:focus { border-color: rgba(96,165,250,.8); background: rgba(2,6,23,0.65); box-shadow: 0 10px 30px rgba(96,165,250,.2); transform: none; }

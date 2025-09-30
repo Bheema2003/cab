@@ -4,6 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
+const https = require('https');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -52,6 +53,12 @@ mongoose.connection.on('connected', () => {
 
 // Booking Schema
 const bookingSchema = new mongoose.Schema({
+    customerName: {
+        type: String,
+        required: false,
+        trim: true,
+        maxlength: 100
+    },
     serviceType: {
         type: String,
         required: true
@@ -71,6 +78,10 @@ const bookingSchema = new mongoose.Schema({
     pickupTime: {
         type: String,
         required: true
+    },
+    returnDate: {
+        type: String,
+        required: false
     },
     contactNumber: {
         type: String,
@@ -138,6 +149,11 @@ async function sendBookingNotification(bookingData) {
                     <div style="background-color: white; padding: 20px; border-radius: 0 0 10px 10px;">
                         <h2 style="color: #333;">📋 Booking Details</h2>
                         <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                            ${bookingData.customerName ? `
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 10px; font-weight: bold; color: #667eea;">Customer Name:</td>
+                                <td style="padding: 10px;">${bookingData.customerName}</td>
+                            </tr>` : ''}
                             <tr style="border-bottom: 1px solid #eee;">
                                 <td style="padding: 10px; font-weight: bold; color: #667eea;">Service Type:</td>
                                 <td style="padding: 10px;">${bookingData.serviceType}</td>
@@ -158,6 +174,11 @@ async function sendBookingNotification(bookingData) {
                                 <td style="padding: 10px; font-weight: bold; color: #667eea;">Pickup Time:</td>
                                 <td style="padding: 10px;">${bookingData.pickupTime}</td>
                             </tr>
+                            ${bookingData.returnDate ? `
+                            <tr style=\"border-bottom: 1px solid #eee;\">
+                                <td style=\"padding: 10px; font-weight: bold; color: #667eea;\">Return Date:</td>
+                                <td style=\"padding: 10px;\">${bookingData.returnDate}</td>
+                            </tr>` : ''}
                             <tr style="border-bottom: 1px solid #eee;">
                                 <td style="padding: 10px; font-weight: bold; color: #667eea;">Contact Number:</td>
                                 <td style="padding: 10px;">${bookingData.contactNumber}</td>
@@ -191,6 +212,54 @@ async function sendBookingNotification(bookingData) {
     } catch (error) {
         console.error('❌ Email notification failed:', error);
         return false;
+    }
+}
+
+// WhatsApp (Meta Cloud API) notification
+async function sendWhatsAppNotification(bookingData) {
+    try {
+        const token = process.env.WHATSAPP_TOKEN;
+        const phoneNumberId = process.env.WHATSAPP_PHONE_ID; // e.g. '123456789012345'
+        const toNumber = process.env.WHATSAPP_TO; // e.g. '+91xxxxxxxxxx'
+        if (!token || !phoneNumberId || !toNumber) {
+            return { ok: false, skipped: true };
+        }
+
+        const payload = JSON.stringify({
+            messaging_product: 'whatsapp',
+            to: toNumber,
+            type: 'text',
+            text: {
+                preview_url: false,
+                body: `🚕 AVB Cabs - New Booking\n\nName: ${bookingData.customerName || '-'}\nFrom: ${bookingData.pickupFrom}\nTo: ${bookingData.destination}\nDate: ${bookingData.pickupDate}\nTime: ${bookingData.pickupTime}\nContact: ${bookingData.contactNumber}`
+            }
+        });
+
+        const options = {
+            hostname: 'graph.facebook.com',
+            path: `/v20.0/${phoneNumberId}/messages`,
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(payload)
+            }
+        };
+
+        await new Promise((resolve, reject) => {
+            const req = https.request(options, (res) => {
+                res.on('data', () => {});
+                res.on('end', () => resolve());
+            });
+            req.on('error', reject);
+            req.write(payload);
+            req.end();
+        });
+        console.log('✅ WhatsApp notification sent');
+        return { ok: true };
+    } catch (err) {
+        console.error('❌ WhatsApp notification failed:', err?.message || err);
+        return { ok: false, error: err };
     }
 }
 
@@ -248,6 +317,8 @@ app.post('/api/bookings', async (req, res) => {
                 savedBooking = { id: fallback.id, ...bookingData };
                 // Send email notification
                 await sendBookingNotification(savedBooking);
+                // Send WhatsApp notification
+                await sendWhatsAppNotification(savedBooking);
                 return res.json({ success: true, message: 'Booking saved locally', bookingId: fallback.id });
             }
         } else {
@@ -258,6 +329,8 @@ app.post('/api/bookings', async (req, res) => {
             
             // Send email notification
             await sendBookingNotification(savedBooking);
+            // Send WhatsApp notification
+            await sendWhatsAppNotification(savedBooking);
             
             return res.json({ success: true, message: 'Booking saved successfully!', bookingId: newBooking._id });
         }
