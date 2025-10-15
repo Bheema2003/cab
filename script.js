@@ -246,6 +246,33 @@ const ADMIN_CREDENTIALS = {
 // Handle form submission
 let isSubmitting = false; // Prevent multiple submissions
 
+// Unified API fetch with timeout and fallback to Netlify proxy
+function fetchWithTimeout(url, options = {}, timeoutMs = 15000){
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs);
+    const merged = { ...options, signal: controller.signal };
+    return fetch(url, merged).finally(() => clearTimeout(id));
+}
+
+function apiUrl(path){
+    const base = API_BASE || '';
+    const p = path.startsWith('/') ? path : `/${path}`;
+    return `${base}/api${p}`.replace(/\/+/, '/');
+}
+
+async function apiFetch(path, options){
+    const directUrl = apiUrl(path);
+    try{
+        const res = await fetchWithTimeout(directUrl, options);
+        if (res.ok) return res;
+        throw new Error(`HTTP ${res.status}`);
+    }catch(_){
+        // Fallback to same-origin Netlify proxy
+        const proxyUrl = `${location.origin}/api${path.startsWith('/') ? path : '/' + path}`;
+        return fetchWithTimeout(proxyUrl, options);
+    }
+}
+
 async function handleBookingSubmission(formData, formType) {
     // Prevent multiple submissions
     if (isSubmitting) {
@@ -264,7 +291,7 @@ async function handleBookingSubmission(formData, formType) {
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SUBMITTING...';
         }
         
-        const response = await fetch(`${API_BASE}/api/bookings`, {
+        const response = await apiFetch('/bookings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ...formData, serviceType: formType })
@@ -370,7 +397,7 @@ function handleAdminLogin(e) {
 // Load admin bookings
 async function loadAdminBookings() {
     try {
-        const response = await fetch(`${API_BASE}/api/bookings`);
+        const response = await apiFetch('/bookings');
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -483,7 +510,7 @@ function updateAdminStats(bookings) {
 async function deleteBooking(id) {
     if (!id || !confirm('Delete this booking?')) return;
     try {
-        const res = await fetch(`${API_BASE}/api/bookings/${id}`, { method: 'DELETE' });
+        const res = await apiFetch(`/bookings/${id}`, { method: 'DELETE' });
         
         if (!res.ok) {
             throw new Error(`HTTP error! status: ${res.status}`);
@@ -564,7 +591,7 @@ async function submitReview(e) {
     try {
         showNotification('Submitting review...', 'info');
         
-        const response = await fetch(`${API_BASE}/api/reviews`, {
+        const response = await apiFetch('/reviews', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(formData)
@@ -591,7 +618,7 @@ async function submitReview(e) {
 
 async function loadReviews() {
     try {
-        const response = await fetch(`${API_BASE}/api/reviews`);
+        const response = await apiFetch('/reviews');
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -1120,7 +1147,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function checkNewBookingsAndNotify(){
         try{
-            const res = await fetch(`${API_BASE}/api/bookings`);
+            const res = await apiFetch('/bookings');
             if(!res.ok) return;
             const data = await res.json();
             if(!data.success || !Array.isArray(data.bookings)) return;
