@@ -695,6 +695,19 @@ function throttleScroll(callback, delay = 16) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded successfully');
     
+    // Ensure in-page anchors reliably navigate (even if default is prevented elsewhere)
+    document.querySelectorAll('a[href^="#"]').forEach(function(anchor){
+        anchor.addEventListener('click', function(e){
+            const targetId = anchor.getAttribute('href');
+            if (!targetId || targetId === '#') return;
+            const targetEl = document.querySelector(targetId);
+            if (targetEl){
+                e.preventDefault();
+                targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    });
+
     // Optimize scroll performance
     let isScrolling = false;
     window.addEventListener('scroll', () => {
