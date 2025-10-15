@@ -708,6 +708,21 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Make any "Write a Review" button scroll to the reviews section, then open the modal
+    const reviewsSection = document.getElementById('reviews');
+    document.querySelectorAll('.review-btn').forEach(function(btn){
+        btn.addEventListener('click', function(ev){
+            // If this button already has inline onclick to open modal, we still control scroll first
+            ev.preventDefault();
+            if (reviewsSection){
+                reviewsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                setTimeout(() => { try { openReviewModal(); } catch(_){} }, 400);
+            } else {
+                try { openReviewModal(); } catch(_){}
+            }
+        });
+    });
+
     // Optimize scroll performance
     let isScrolling = false;
     window.addEventListener('scroll', () => {
