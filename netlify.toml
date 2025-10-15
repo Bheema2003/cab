@@ -4,7 +4,7 @@
 
 [[redirects]]
   from = "/api/*"
-  to = "https://YOUR-ACTUAL-BACKEND-URL.onrender.com/api/:splat"
+  to = "https://cab-9wdp.onrender.com/api/:splat"
   status = 200
   force = true
 
