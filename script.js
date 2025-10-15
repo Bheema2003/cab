@@ -703,25 +703,46 @@ document.addEventListener('DOMContentLoaded', function() {
             const targetEl = document.querySelector(targetId);
             if (targetEl){
                 e.preventDefault();
-                targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // account for sticky navbar offset using built‑in scroll and current offset
+                try {
+                    const rect = targetEl.getBoundingClientRect();
+                    const y = rect.top + window.pageYOffset - 80; // navbar height
+                    window.scrollTo({ top: y < 0 ? 0 : y, behavior: 'smooth' });
+                } catch(_) {
+                    targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
             }
         });
     });
 
     // Make any "Write a Review" button scroll to the reviews section, then open the modal
+    function scrollToWithOffset(targetSelector){
+        const el = typeof targetSelector === 'string' ? document.querySelector(targetSelector) : targetSelector;
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const y = rect.top + window.pageYOffset - 80;
+        window.scrollTo({ top: y < 0 ? 0 : y, behavior: 'smooth' });
+    }
+
     const reviewsSection = document.getElementById('reviews');
-    document.querySelectorAll('.review-btn').forEach(function(btn){
+    document.querySelectorAll('.review-btn, a[href="#reviews"]').forEach(function(btn){
         btn.addEventListener('click', function(ev){
             // If this button already has inline onclick to open modal, we still control scroll first
             ev.preventDefault();
-            if (reviewsSection){
-                reviewsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                setTimeout(() => { try { openReviewModal(); } catch(_){} }, 400);
-            } else {
-                try { openReviewModal(); } catch(_){}
-            }
+            scrollToWithOffset(reviewsSection || '#reviews');
+            setTimeout(() => { try { openReviewModal(); } catch(_){} }, 400);
         });
     });
+
+    // Make Admin Login link always open modal (plus scroll to top so it's visible)
+    const adminLoginLink = document.getElementById('adminLoginBtn');
+    if (adminLoginLink){
+        adminLoginLink.addEventListener('click', function(e){
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setTimeout(() => { try { openAdminLoginModal(); } catch(_){} }, 200);
+        });
+    }
 
     // Optimize scroll performance
     let isScrolling = false;
@@ -1124,4 +1145,5 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(checkNewBookingsAndNotify, 60000);
     // Run once at startup
     checkNewBookingsAndNotify();
+}); 
 }); 
