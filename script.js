@@ -204,36 +204,34 @@ const IS_PROD_SITE = (() => {
     } catch {
         return false;
     }
-})();
+    })();
 
-if (IS_PROD_SITE) {
+    if (IS_PROD_SITE) {
     ['log','debug','trace'].forEach(k => {
         try { console[k] = () => {}; } catch {}
-    });
-}
+        });
+    }
 
 // API base resolution
 function resolveApiBase() {
-    const hostname = location.hostname;
-    
-    // Local development
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        return 'http://localhost:3000';
-    }
-    
-    // Production domains - use same-origin for proxy
-    const isNetlify = hostname.endsWith('.netlify.app') || hostname === 'avbcab.netlify.app';
-    const isProdDomain = hostname.endsWith('avbcabs.com') || hostname.endsWith('www.avbcabs.com');
-    if (isNetlify || isProdDomain) {
-        return '';
-    }
-
-    // Use meta tag or fallback
+    // 1) Always respect meta override if provided
     const meta = document.querySelector('meta[name="api-base"]');
     if (meta?.content?.trim()) {
         return meta.content.trim().replace(/\/$/, '');
     }
     
+    const hostname = location.hostname;
+    // 2) Local development
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return 'http://localhost:3000';
+    }
+    // 3) Same-origin proxy on Netlify / custom domain
+    const isNetlify = hostname.endsWith('.netlify.app') || hostname === 'avbcab.netlify.app';
+    const isProdDomain = hostname.endsWith('avbcabs.com') || hostname.endsWith('www.avbcabs.com');
+    if (isNetlify || isProdDomain) {
+        return '';
+    }
+    // 4) Fallback backend URL
     return 'https://cab-9wdp.onrender.com';
 }
 
@@ -283,9 +281,9 @@ async function handleBookingSubmission(formData, formType) {
             
             // Reset form with delay to ensure success message is shown
             setTimeout(() => {
-                const form = document.getElementById(formType.toLowerCase() + 'Form');
-                if (form) {
-                    form.reset();
+            const form = document.getElementById(formType.toLowerCase() + 'Form');
+            if (form) {
+                form.reset();
                     // Clear any remaining values manually
                     const inputs = form.querySelectorAll('input, textarea, select');
                     inputs.forEach(input => {
@@ -533,7 +531,7 @@ function updateCharCount() {
 }
 
 async function submitReview(e) {
-    e.preventDefault();
+            e.preventDefault();
     
     const formData = {
         customerName: document.getElementById('customerName').value,
@@ -726,9 +724,9 @@ document.addEventListener('DOMContentLoaded', function() {
         function showSlide(i){
             // Use requestAnimationFrame for smooth transitions
             requestAnimationFrame(() => {
-                slides.forEach((s,idx)=> s.classList.toggle('active', idx===i));
-                indicators.forEach((d,idx)=> d.classList.toggle('active', idx===i));
-                current = i;
+            slides.forEach((s,idx)=> s.classList.toggle('active', idx===i));
+            indicators.forEach((d,idx)=> d.classList.toggle('active', idx===i));
+            current = i;
             });
         }
         function next(){ showSlide((current+1)%slides.length); }
@@ -906,9 +904,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 customerName: nameInputEl ? nameInputEl.value : '',
                 contactNumber: document.getElementById('airportContactNumber').value
             };
-
+            
             if (validateBookingForm(bookingData, 'Airport')) {
-                await handleBookingSubmission(bookingData, 'Airport');
+            await handleBookingSubmission(bookingData, 'Airport');
             }
         });
     }
@@ -938,7 +936,7 @@ document.addEventListener('DOMContentLoaded', function() {
             contactNumber: document.getElementById('localContactNumber')?.value || document.getElementById('airportContactNumber')?.value || ''
         };
         if (validateBookingForm(data, 'Local')) {
-            handleBookingSubmission(data, 'Local');
+        handleBookingSubmission(data, 'Local');
         }
     }
 
@@ -953,7 +951,7 @@ document.addEventListener('DOMContentLoaded', function() {
             contactNumber: document.getElementById('onewayContactNumber')?.value || document.getElementById('airportContactNumber')?.value || ''
         };
         if (validateBookingForm(data, 'One Way')) {
-            handleBookingSubmission(data, 'One Way');
+        handleBookingSubmission(data, 'One Way');
         }
     }
 
@@ -969,7 +967,7 @@ document.addEventListener('DOMContentLoaded', function() {
             contactNumber: document.getElementById('roundContactNumber')?.value || document.getElementById('airportContactNumber')?.value || ''
         };
         if (validateBookingForm(data, 'Round Trip')) {
-            handleBookingSubmission(data, 'Round Trip');
+        handleBookingSubmission(data, 'Round Trip');
         }
     }
 
