@@ -11,15 +11,15 @@ const PORT = process.env.PORT || 3000;
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'https://ubiquitous-stardust-274b3c.netlify.app';
 
 // Middleware
-app.use(cors({ 
-    origin: FRONTEND_ORIGIN === '*' ? '*' : [
-        FRONTEND_ORIGIN, 
-        'http://localhost:3000', 
-        'http://127.0.0.1:3000',
-        'https://ubiquitous-stardust-274b3c.netlify.app'
-    ], 
-    credentials: false 
-}));
+// CORS: allow configured origin, localhost, and known Netlify site
+const allowedOrigins = FRONTEND_ORIGIN === '*' ? '*' : [
+    FRONTEND_ORIGIN,
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'https://ubiquitous-stardust-274b3c.netlify.app',
+    'https://avbcab.netlify.app'
+];
+app.use(cors({ origin: allowedOrigins, credentials: false }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
