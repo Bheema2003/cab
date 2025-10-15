@@ -1,0 +1,5 @@
+This is a placeholder for the backend deployment package. The actual zip file would contain:
+- server.js
+- package.json
+- data/ folder
+- All necessary backend files for Render.com deployment

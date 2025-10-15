@@ -1,5 +1,5 @@
 # Netlify redirects for API calls
-/api/*  https://cab-9wdp.onrender.com/api/:splat  200
+/api/*  https://avb-cabs-backend.onrender.com/api/:splat  200
 
 # Handle client-side routing
 /*    /index.html   200

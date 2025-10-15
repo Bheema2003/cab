@@ -1,45 +1,243 @@
-// Simple notification system
-function showNotification(message, type = 'success') {
-    alert(message); // Simple fallback
+// Enhanced notification system
+function showNotification(message, type = 'info') {
+    // Remove existing notifications
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(notification => notification.remove());
+
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <div class="notification-content">
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
+            <span>${message}</span>
+            <button class="notification-close">&times;</button>
+        </div>
+    `;
+
+    // Add styles
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#1e3a8a'};
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        z-index: 10000;
+        max-width: 400px;
+        animation: slideInRight 0.3s ease;
+    `;
+
+    // Add to page
+    document.body.appendChild(notification);
+
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.style.animation = 'slideOutRight 0.3s ease';
+            setTimeout(() => notification.remove(), 300);
+        }
+    }, 5000);
+
+    // Close button functionality
+    const closeBtn = notification.querySelector('.notification-close');
+    closeBtn.addEventListener('click', () => {
+        notification.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    });
 }
 
-// API base - supports localhost and Netlify
-function resolveApiBase() {
-    console.log('🔍 Resolving API base...');
-    console.log('📍 Current hostname:', location.hostname);
+// Success popup system
+function showSuccessPopup(message) {
+    console.log('showSuccessPopup called with message:', message);
     
-    // For local development, use localhost:3000
-    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-        console.log('🏠 Using localhost for development');
+    // Remove existing popups
+    const existingPopups = document.querySelectorAll('.success-popup');
+    existingPopups.forEach(popup => popup.remove());
+
+    // Create popup overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'success-popup-overlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        animation: fadeIn 0.3s ease;
+    `;
+
+    // Create popup content
+    const popup = document.createElement('div');
+    popup.className = 'success-popup';
+    popup.innerHTML = `
+        <div class="popup-content">
+            <div class="popup-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h3>Booking Successful!</h3>
+            <p>${message}</p>
+            <button class="popup-close-btn">OK</button>
+        </div>
+    `;
+    popup.style.cssText = `
+        background: rgba(0, 0, 0, 0.6);
+        padding: 2rem;
+        border-radius: 15px;
+        text-align: center;
+        max-width: 400px;
+        margin: 20px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        animation: popupSlideIn 0.3s ease;
+    `;
+
+    // Add to page
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+
+    // Close functionality
+    const closeBtn = popup.querySelector('.popup-close-btn');
+    const closePopup = () => {
+        overlay.style.animation = 'fadeOut 0.3s ease';
+        popup.style.animation = 'popupSlideOut 0.3s ease';
+        setTimeout(() => overlay.remove(), 300);
+    };
+
+    closeBtn.addEventListener('click', closePopup);
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            closePopup();
+        }
+    });
+
+    // Auto close after 8 seconds
+    setTimeout(closePopup, 8000);
+}
+
+// Form validation
+function validateBookingForm(data, formType) {
+    if (formType === 'Airport') {
+        if (!data.customerName || data.customerName.trim() === '') {
+            showNotification('Please enter your name.', 'error');
+            return false;
+        }
+        if (!data.pickupFrom || data.pickupFrom.trim() === '') {
+            showNotification('Please enter pickup location.', 'error');
+            return false;
+        }
+        
+        if (!data.destination || data.destination.trim() === '') {
+            showNotification('Please enter your drop location.', 'error');
+            return false;
+        }
+        
+        if (!data.contactNumber || data.contactNumber.trim() === '') {
+            showNotification('Please enter your contact number.', 'error');
+            return false;
+        }
+        
+        // Validate phone number format
+        const phoneRegex = /^[6-9]\d{9}$/;
+        if (!phoneRegex.test(data.contactNumber.replace(/\s/g, ''))) {
+            showNotification('Please enter a valid 10-digit contact number.', 'error');
+            return false;
+        }
+    }
+    
+    // Common validations
+    const dateField = data.pickupDate || data.departureDate;
+    if (!dateField) {
+        showNotification('Please select date.', 'error');
+        return false;
+    }
+    
+    const timeField = data.pickupTime || data.departureTime;
+    if (!timeField) {
+        showNotification('Please select time.', 'error');
+        return false;
+    }
+    
+    // Validate date
+    const pickupDate = new Date(dateField);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (pickupDate < today) {
+        showNotification('Date cannot be in the past.', 'error');
+        return false;
+    }
+    
+    return true;
+}
+
+// Function to format booking message for WhatsApp
+function formatBookingMessage(data, formType) {
+    let message = `🚕 *NEW CAB BOOKING REQUEST* 🚕\n\n`;
+    message += `*Service Type:* ${formType}\n\n`;
+    
+    if (formType === 'Airport') {
+        message += `*Pickup Location:* ${data.pickupFrom}\n`;
+        message += `*Drop Location:* ${data.destination}\n`;
+        message += `*Pickup Date:* ${data.pickupDate}\n`;
+        message += `*Pickup Time:* ${data.pickupTime}\n`;
+        message += `*Contact Number:* ${data.contactNumber}\n`;
+    }
+    
+    message += `\n*Booking Time:* ${new Date().toLocaleString('en-IN')}\n`;
+    message += `*Website:* AVB Cabs - www.avbcabs.com`;
+    
+    return message;
+}
+
+// Production optimizations
+const IS_PROD_SITE = (() => {
+    try {
+        const h = location.hostname;
+        return h.endsWith('.netlify.app') || h.endsWith('avbcabs.com') || h.endsWith('www.avbcabs.com') || h === 'avbcab.netlify.app';
+    } catch {
+        return false;
+    }
+})();
+
+if (IS_PROD_SITE) {
+    ['log','debug','trace'].forEach(k => {
+        try { console[k] = () => {}; } catch {}
+    });
+}
+
+// API base resolution
+function resolveApiBase() {
+    const hostname = location.hostname;
+    
+    // Local development
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
         return 'http://localhost:3000';
     }
     
-    // If running on Netlify or a custom production domain, prefer same-origin
-    // so that Netlify `_redirects` can proxy `/api/*` to the backend and avoid CORS
-    const isNetlify = location.hostname.endsWith('.netlify.app');
-    const isProdDomain = location.hostname.endsWith('avbcabs.com') || location.hostname.endsWith('www.avbcabs.com');
+    // Production domains - use same-origin for proxy
+    const isNetlify = hostname.endsWith('.netlify.app') || hostname === 'avbcab.netlify.app';
+    const isProdDomain = hostname.endsWith('avbcabs.com') || hostname.endsWith('www.avbcabs.com');
     if (isNetlify || isProdDomain) {
-        console.log('🛰️ Detected Netlify/prod domain; using same-origin proxy for API');
         return '';
     }
 
-    // For Netlify/production, use the meta tag
+    // Use meta tag or fallback
     const meta = document.querySelector('meta[name="api-base"]');
-    console.log('🏷️ Meta tag found:', meta);
-    if (meta && meta.content && meta.content.trim().length > 0) {
-        const apiBase = meta.content.trim().replace(/\/$/, '');
-        console.log('🌐 Using meta tag API base:', apiBase);
-        return apiBase;
+    if (meta?.content?.trim()) {
+        return meta.content.trim().replace(/\/$/, '');
     }
     
-    // Fallback
-    console.log('🔄 Using fallback API base');
     return 'https://cab-9wdp.onrender.com';
 }
 
 const API_BASE = resolveApiBase();
-console.log('🌐 Final API_BASE resolved to:', API_BASE);
-console.log('📍 Current location:', location.href);
 
 // Admin credentials
 const ADMIN_CREDENTIALS = {
@@ -48,53 +246,65 @@ const ADMIN_CREDENTIALS = {
 };
 
 // Handle form submission
+let isSubmitting = false; // Prevent multiple submissions
+
 async function handleBookingSubmission(formData, formType) {
+    // Prevent multiple submissions
+    if (isSubmitting) {
+        showNotification('Please wait, your booking is being processed...', 'info');
+        return;
+    }
+    
     try {
-        console.log('🚀 Starting booking submission...');
-        console.log('📤 Form data:', formData);
-        console.log('🌐 Calling API URL:', `${API_BASE}/api/bookings`);
-        
+        isSubmitting = true;
         showNotification('Submitting booking...', 'info');
+        
+        // Disable submit button and show loading state
+        const submitBtn = document.querySelector(`#${formType.toLowerCase()}Form .submit-btn`);
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SUBMITTING...';
+        }
         
         const response = await fetch(`${API_BASE}/api/bookings`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                ...formData,
-                serviceType: formType
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...formData, serviceType: formType })
         });
-
-        console.log('📥 Response status:', response.status);
-        console.log('📥 Response headers:', response.headers);
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const responseText = await response.text();
-        console.log('📥 Response text:', responseText);
-
-        let result;
-        try {
-            result = JSON.parse(responseText);
-        } catch (parseError) {
-            console.error('❌ JSON parse error:', parseError);
-            throw new Error('Invalid response from server');
-        }
-
-        console.log('📥 Parsed result:', result);
+        const result = await response.json();
 
         if (result.success) {
             showNotification('Thank you for booking a cab. We will assign a cab for you shortly.', 'success');
             
-            // Reset form
-            const form = document.getElementById(formType.toLowerCase() + 'Form');
-            if (form) {
-                form.reset();
-            }
+            // Reset form with delay to ensure success message is shown
+            setTimeout(() => {
+                const form = document.getElementById(formType.toLowerCase() + 'Form');
+                if (form) {
+                    form.reset();
+                    // Clear any remaining values manually
+                    const inputs = form.querySelectorAll('input, textarea, select');
+                    inputs.forEach(input => {
+                        if (input.type === 'date' || input.type === 'time') {
+                            input.value = '';
+                        } else if (input.type === 'text' || input.type === 'tel') {
+                            input.value = '';
+                        } else if (input.type === 'textarea') {
+                            input.value = '';
+                        }
+                    });
+                    
+                    // Reset default time value for airport form
+                    const timeInput = form.querySelector('input[type="time"]');
+                    if (timeInput && formType === 'Airport') {
+                        timeInput.value = '14:30';
+                    }
+                }
+            }, 1000);
         } else {
             throw new Error(result.message || 'Failed to save booking');
         }
@@ -102,16 +312,23 @@ async function handleBookingSubmission(formData, formType) {
     } catch (error) {
         console.error('❌ Error submitting booking:', error);
         showNotification(`Booking failed: ${error.message}`, 'error');
+    } finally {
+        // Always reset the submission flag and button state
+        isSubmitting = false;
+        
+        // Re-enable submit button
+        const submitBtn = document.querySelector(`#${formType.toLowerCase()}Form .submit-btn`);
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-search"></i> FIND CAB NEAR ME';
+        }
     }
 }
 
 // Admin modal functions
 function openAdminLoginModal() {
-    console.log('🚪 Opening admin login modal...');
     const modal = document.getElementById('adminLoginModal');
-    if (modal) {
-        modal.style.display = 'block';
-    }
+    if (modal) modal.style.display = 'block';
 }
 
 function closeAdminLoginModal() {
@@ -124,7 +341,6 @@ function closeAdminLoginModal() {
 }
 
 function openAdminDashboard() {
-    console.log('📊 Opening admin dashboard...');
     const modal = document.getElementById('adminDashboardModal');
     if (modal) {
         modal.style.display = 'block';
@@ -134,26 +350,21 @@ function openAdminDashboard() {
 
 function closeAdminDashboard() {
     const modal = document.getElementById('adminDashboardModal');
-    if (modal) {
-        modal.style.display = 'none';
-    }
+    if (modal) modal.style.display = 'none';
 }
 
 // Admin login handler
 function handleAdminLogin(e) {
     e.preventDefault();
-    console.log('🔐 Admin login attempt...');
     
     const username = document.getElementById('adminUsername').value;
     const password = document.getElementById('adminPassword').value;
     
     if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
-        console.log('✅ Admin login successful!');
         closeAdminLoginModal();
         openAdminDashboard();
         showNotification('Admin login successful!', 'success');
     } else {
-        console.log('❌ Admin login failed');
         showNotification('Invalid username or password!', 'error');
     }
 }
@@ -161,29 +372,13 @@ function handleAdminLogin(e) {
 // Load admin bookings
 async function loadAdminBookings() {
     try {
-        console.log('🔄 Loading admin bookings...');
-        console.log('🌐 Calling API URL:', `${API_BASE}/api/bookings`);
-        
         const response = await fetch(`${API_BASE}/api/bookings`);
-        
-        console.log('📥 Admin response status:', response.status);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const responseText = await response.text();
-        console.log('📥 Admin response text:', responseText);
-
-        let data;
-        try {
-            data = JSON.parse(responseText);
-        } catch (parseError) {
-            console.error('❌ Admin JSON parse error:', parseError);
-            throw new Error('Invalid response from server');
-        }
-
-        console.log('📥 Admin parsed data:', data);
+        const data = await response.json();
 
         if (data.success) {
             displayAdminBookings(data.bookings);
@@ -267,15 +462,11 @@ function displayAdminBookings(bookings) {
 
 // Update admin statistics
 function updateAdminStats(bookings) {
-    console.log('🔄 Updating admin stats with bookings:', bookings);
-    
     const totalBookings = bookings.length;
-    
     const today = new Date().toDateString();
     const todayBookings = bookings.filter(booking => 
         new Date(booking.createdAt).toDateString() === today
     ).length;
-    
     const airportBookings = bookings.filter(booking => 
         booking.serviceType === 'Airport'
     ).length;
@@ -285,34 +476,9 @@ function updateAdminStats(bookings) {
     const todayElement = document.getElementById('todayBookings');
     const airportElement = document.getElementById('airportBookings');
     
-    console.log('🔍 Looking for stat elements:', {
-        totalElement: !!totalElement,
-        todayElement: !!todayElement,
-        airportElement: !!airportElement
-    });
-    
-    if (totalElement) {
-        totalElement.textContent = totalBookings;
-        console.log('✅ Updated totalBookings to:', totalBookings);
-    } else {
-        console.error('❌ totalBookings element not found!');
-    }
-    
-    if (todayElement) {
-        todayElement.textContent = todayBookings;
-        console.log('✅ Updated todayBookings to:', todayBookings);
-    } else {
-        console.error('❌ todayBookings element not found!');
-    }
-    
-    if (airportElement) {
-        airportElement.textContent = airportBookings;
-        console.log('✅ Updated airportBookings to:', airportBookings);
-    } else {
-        console.error('❌ airportBookings element not found!');
-    }
-    
-    console.log('📊 Stats updated:', { totalBookings, todayBookings, airportBookings });
+    if (totalElement) totalElement.textContent = totalBookings;
+    if (todayElement) todayElement.textContent = todayBookings;
+    if (airportElement) airportElement.textContent = airportBookings;
 }
 
 // Delete booking function
@@ -325,16 +491,7 @@ async function deleteBooking(id) {
             throw new Error(`HTTP error! status: ${res.status}`);
         }
 
-        const responseText = await res.text();
-        console.log('📥 Delete response text:', responseText);
-
-        let data;
-        try {
-            data = JSON.parse(responseText);
-        } catch (parseError) {
-            console.error('❌ Delete JSON parse error:', parseError);
-            throw new Error('Invalid response from server');
-        }
+        const data = await res.json();
 
         if (data.success) {
             showNotification('Booking deleted', 'success');
@@ -376,7 +533,7 @@ function updateCharCount() {
 }
 
 async function submitReview(e) {
-            e.preventDefault();
+    e.preventDefault();
     
     const formData = {
         customerName: document.getElementById('customerName').value,
@@ -411,9 +568,7 @@ async function submitReview(e) {
         
         const response = await fetch(`${API_BASE}/api/reviews`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(formData)
         });
         
@@ -426,7 +581,7 @@ async function submitReview(e) {
         if (result.success) {
             showNotification('Thank you for your review!', 'success');
             closeReviewModal();
-            loadReviews(); // Reload reviews
+            loadReviews();
         } else {
             throw new Error(result.message || 'Failed to submit review');
         }
@@ -528,35 +683,90 @@ function displayReviews(reviews, averageRating) {
     container.innerHTML = reviewsHTML;
 }
 
+// Performance optimization: Throttle scroll events
+let scrollTimeout;
+function throttleScroll(callback, delay = 16) {
+    if (scrollTimeout) return;
+    scrollTimeout = setTimeout(() => {
+        callback();
+        scrollTimeout = null;
+    }, delay);
+}
+
 // Wait for DOM to be loaded
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded successfully');
-    // Hero slider init
+    
+    // Optimize scroll performance
+    let isScrolling = false;
+    window.addEventListener('scroll', () => {
+        if (!isScrolling) {
+            window.requestAnimationFrame(() => {
+                // Disable heavy animations during scroll
+                document.body.style.setProperty('--scroll-active', '1');
+                isScrolling = false;
+            });
+            isScrolling = true;
+        }
+    }, { passive: true });
+    
+    // Re-enable animations after scroll ends
+    window.addEventListener('scroll', throttleScroll(() => {
+        document.body.style.setProperty('--scroll-active', '0');
+    }, 150), { passive: true });
+    // Optimized hero slider init
     (function initHeroSlider(){
         const slides = Array.from(document.querySelectorAll('.hero-section .slide'));
         const indicators = Array.from(document.querySelectorAll('.slider-indicators .indicator'));
         if (!slides.length) return;
         let current = 0;
         let timerId;
+        let isScrolling = false;
+        
         function showSlide(i){
-            slides.forEach((s,idx)=> s.classList.toggle('active', idx===i));
-            indicators.forEach((d,idx)=> d.classList.toggle('active', idx===i));
-            current = i;
+            // Use requestAnimationFrame for smooth transitions
+            requestAnimationFrame(() => {
+                slides.forEach((s,idx)=> s.classList.toggle('active', idx===i));
+                indicators.forEach((d,idx)=> d.classList.toggle('active', idx===i));
+                current = i;
+            });
         }
         function next(){ showSlide((current+1)%slides.length); }
-        function start(){ stop(); timerId = setInterval(next, 3000); }
+        function start(){ 
+            if (!isScrolling) { // Don't start if user is scrolling
+                stop(); 
+                timerId = setInterval(next, 4000); // Slower for better performance
+            }
+        }
         function stop(){ if(timerId) clearInterval(timerId); }
+        
         indicators.forEach((dot,idx)=> dot.addEventListener('click', ()=>{ showSlide(idx); start(); }));
         const hero = document.querySelector('.hero-section');
-        if (hero){ hero.addEventListener('mouseenter', stop); hero.addEventListener('mouseleave', start); }
+        if (hero){ 
+            hero.addEventListener('mouseenter', stop); 
+            hero.addEventListener('mouseleave', start); 
+        }
+        
+        // Pause slider during scroll
+        window.addEventListener('scroll', throttleScroll(() => {
+            isScrolling = true;
+            stop();
+            setTimeout(() => { isScrolling = false; start(); }, 1000);
+        }, 100), { passive: true });
+        
         showSlide(0); start();
     })();
     
-    // Google Places (manual-only unless key present)
+    // Google Places (disabled for better performance - can be enabled if needed)
     const GOOGLE_MAPS_API_KEY = (document.querySelector('meta[name="google-maps-api-key"]')?.content || '').trim();
 
     function loadGoogleMapsPlacesApi() {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
+            // Disable Google Maps API loading for better performance
+            // Can be re-enabled by uncommenting the code below if needed
+            resolve(null);
+            
+            /* Uncomment to enable Google Maps autocomplete:
             if (window.google && window.google.maps && window.google.maps.places) {
                 resolve(window.google);
                 return;
@@ -580,6 +790,7 @@ document.addEventListener('DOMContentLoaded', function() {
             script.onload = () => resolve(window.google);
             script.onerror = reject;
             document.head.appendChild(script);
+            */
         });
     }
 
@@ -624,12 +835,11 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Google Maps API load error:', err);
     });
 
-    // Airport form submission
+    // Form submissions
     const airportForm = document.getElementById('airportForm');
     const localForm = document.getElementById('localForm');
     const onewayForm = document.getElementById('onewayForm');
     const roundtripForm = document.getElementById('roundtripForm');
-    console.log('🔍 Looking for airportForm:', airportForm);
     
     if (airportForm) {
         // Enforce date/time constraints (no past date; time not in past when date is today)
@@ -684,10 +894,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 airportForm.insertBefore(nameGroup, airportForm.querySelector('.submit-btn'));
             }
         }
-        console.log('✅ Found airportForm, adding submit listener');
         airportForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-            console.log('📝 Form submitted!');
             
             const nameInputEl = document.getElementById('airportCustomerName');
             const bookingData = {
@@ -698,18 +906,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 customerName: nameInputEl ? nameInputEl.value : '',
                 contactNumber: document.getElementById('airportContactNumber').value
             };
-            
-            console.log('📊 Form data:', bookingData);
 
-            // Validate fields before submitting
-            if (typeof validateBookingForm === 'function') {
-                const valid = validateBookingForm(bookingData, 'Airport');
-                if (!valid) return;
+            if (validateBookingForm(bookingData, 'Airport')) {
+                await handleBookingSubmission(bookingData, 'Airport');
             }
-            await handleBookingSubmission(bookingData, 'Airport');
         });
-    } else {
-        console.error('❌ airportForm not found!');
     }
 
     // Tab switching
@@ -736,11 +937,9 @@ document.addEventListener('DOMContentLoaded', function() {
             customerName: document.getElementById('localCustomerName')?.value || document.getElementById('airportCustomerName')?.value || '',
             contactNumber: document.getElementById('localContactNumber')?.value || document.getElementById('airportContactNumber')?.value || ''
         };
-        if (typeof validateBookingForm === 'function') {
-            const valid = validateBookingForm(data, 'Local');
-            if (!valid) return;
+        if (validateBookingForm(data, 'Local')) {
+            handleBookingSubmission(data, 'Local');
         }
-        handleBookingSubmission(data, 'Local');
     }
 
     function gatherAndSubmitOneway(e){
@@ -753,11 +952,9 @@ document.addEventListener('DOMContentLoaded', function() {
             customerName: document.getElementById('onewayCustomerName')?.value || document.getElementById('airportCustomerName')?.value || '',
             contactNumber: document.getElementById('onewayContactNumber')?.value || document.getElementById('airportContactNumber')?.value || ''
         };
-        if (typeof validateBookingForm === 'function') {
-            const valid = validateBookingForm(data, 'One Way');
-            if (!valid) return;
+        if (validateBookingForm(data, 'One Way')) {
+            handleBookingSubmission(data, 'One Way');
         }
-        handleBookingSubmission(data, 'One Way');
     }
 
     function gatherAndSubmitRound(e){
@@ -771,11 +968,9 @@ document.addEventListener('DOMContentLoaded', function() {
             customerName: document.getElementById('roundCustomerName')?.value || document.getElementById('airportCustomerName')?.value || '',
             contactNumber: document.getElementById('roundContactNumber')?.value || document.getElementById('airportContactNumber')?.value || ''
         };
-        if (typeof validateBookingForm === 'function') {
-            const valid = validateBookingForm(data, 'Round Trip');
-            if (!valid) return;
+        if (validateBookingForm(data, 'Round Trip')) {
+            handleBookingSubmission(data, 'Round Trip');
         }
-        handleBookingSubmission(data, 'Round Trip');
     }
 
     if (localForm) localForm.addEventListener('submit', gatherAndSubmitLocal);
@@ -784,28 +979,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Admin login button
     const adminLoginBtn = document.getElementById('adminLoginBtn');
-    console.log('🔍 Looking for adminLoginBtn:', adminLoginBtn);
-    
     if (adminLoginBtn) {
-        console.log('✅ Found adminLoginBtn, adding click listener');
         adminLoginBtn.addEventListener('click', function(e) {
             e.preventDefault();
-            console.log('👆 Admin login button clicked!');
             openAdminLoginModal();
         });
-    } else {
-        console.error('❌ adminLoginBtn not found!');
     }
 
     // Admin login form
     const adminLoginForm = document.getElementById('adminLoginForm');
-    console.log('🔍 Looking for adminLoginForm:', adminLoginForm);
-    
     if (adminLoginForm) {
-        console.log('✅ Found adminLoginForm, adding submit listener');
         adminLoginForm.addEventListener('submit', handleAdminLogin);
-    } else {
-        console.error('❌ adminLoginForm not found!');
     }
 
     // Close buttons
@@ -910,8 +1094,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     requestDesktopPermission();
-    // Start polling every 20s
-    setInterval(checkNewBookingsAndNotify, 20000);
+    // Start polling every 60s (reduced frequency for better performance)
+    setInterval(checkNewBookingsAndNotify, 60000);
     // Run once at startup
     checkNewBookingsAndNotify();
 }); 
