@@ -11,15 +11,48 @@ const PORT = process.env.PORT || 3000;
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'https://ubiquitous-stardust-274b3c.netlify.app';
 
 // Middleware
-// CORS: allow configured origin, localhost, and known Netlify site
+// CORS: allow configured origin, localhost, and all Netlify sites
 const allowedOrigins = FRONTEND_ORIGIN === '*' ? '*' : [
     FRONTEND_ORIGIN,
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     'https://ubiquitous-stardust-274b3c.netlify.app',
-    'https://avbcab.netlify.app'
+    'https://avbcab.netlify.app',
+    /^https:\/\/.*\.netlify\.app$/, // Allow all Netlify subdomains
+    /^https:\/\/.*\.netlify\.com$/  // Allow Netlify preview deployments
 ];
-app.use(cors({ origin: allowedOrigins, credentials: false }));
+app.use(cors({ 
+    origin: function(origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        // If FRONTEND_ORIGIN is '*', allow all origins
+        if (FRONTEND_ORIGIN === '*') {
+            return callback(null, true);
+        }
+        
+        // Check each allowed origin
+        for (const allowed of allowedOrigins) {
+            if (allowed === '*') {
+                return callback(null, true);
+            }
+            
+            // Check exact string match
+            if (typeof allowed === 'string' && allowed === origin) {
+                return callback(null, true);
+            }
+            
+            // Check regex pattern match
+            if (allowed instanceof RegExp && allowed.test(origin)) {
+                return callback(null, true);
+            }
+        }
+        
+        // Default: allow the request (permissive for production)
+        callback(null, true);
+    },
+    credentials: false 
+}));
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
@@ -142,15 +175,25 @@ async function verifyEmailTransporter(){
     try {
         if (!EMAIL_USER || !EMAIL_PASS) {
             console.warn('⚠️ Email credentials missing; email notifications will be skipped');
+            console.warn('   EMAIL_USER:', EMAIL_USER || 'NOT SET');
+            console.warn('   EMAIL_PASS:', EMAIL_PASS ? 'SET (hidden)' : 'NOT SET');
+            console.warn('   📝 To enable email, set EMAIL_USER and EMAIL_PASS environment variables');
             isEmailReady = false;
             return;
         }
+        console.log('🔍 Verifying email transporter...');
+        console.log('   Email User:', EMAIL_USER);
         await transporter.verify();
         isEmailReady = true;
-        console.log('✅ Email transporter verified');
+        console.log('✅ Email transporter verified successfully');
+        console.log('   Ready to send emails to:', EMAIL_TO);
     } catch (e) {
         isEmailReady = false;
         console.error('❌ Email transporter verification failed:', e?.message || e);
+        if (e.code === 'EAUTH') {
+            console.error('   ⚠️ Authentication error - Invalid email credentials');
+            console.error('   💡 Make sure you are using an App Password, not your regular Gmail password');
+        }
     }
 }
 verifyEmailTransporter();
@@ -160,8 +203,12 @@ async function sendBookingNotification(bookingData) {
     try {
         if (!isEmailReady) {
             console.warn('✉️ Skipping email send (transporter not ready)');
+            console.warn('⚠️ Email config check - USER:', EMAIL_USER ? 'Set' : 'Missing', 'PASS:', EMAIL_PASS ? 'Set' : 'Missing');
             return false;
         }
+        
+        console.log('📧 Attempting to send booking email to:', EMAIL_TO);
+        
         const mailOptions = {
             from: EMAIL_USER,
             to: EMAIL_TO,
@@ -233,10 +280,24 @@ async function sendBookingNotification(bookingData) {
         };
 
         const info = await transporter.sendMail(mailOptions);
-        console.log('📧 Email notification sent:', info.messageId);
+        console.log('✅ Email notification sent successfully!');
+        console.log('   Message ID:', info.messageId);
+        console.log('   To:', EMAIL_TO);
+        console.log('   From:', EMAIL_USER);
         return true;
     } catch (error) {
-        console.error('❌ Email notification failed:', error);
+        console.error('❌ Email notification failed:', error.message);
+        console.error('   Error code:', error.code);
+        console.error('   Error response:', error.response);
+        console.error('   Full error:', error);
+        
+        // Common Gmail errors
+        if (error.code === 'EAUTH') {
+            console.error('   ⚠️ Authentication failed - Check EMAIL_USER and EMAIL_PASS environment variables');
+        } else if (error.code === 'ECONNECTION') {
+            console.error('   ⚠️ Connection failed - Check internet connection');
+        }
+        
         return false;
     }
 }

@@ -221,20 +221,14 @@ function resolveApiBase() {
         return 'http://localhost:3000';
     }
     
-    // 2) Same-origin proxy on Netlify / custom domain
-    const isNetlify = hostname.endsWith('.netlify.app') || hostname === 'avbcab.netlify.app';
-    const isProdDomain = hostname.endsWith('avbcabs.com') || hostname.endsWith('www.avbcabs.com');
-    if (isNetlify || isProdDomain) {
-        return '';
-    }
-    
-    // 3) Check meta override for production/staging environments
+    // 2) For Netlify/production - use backend URL directly (not redirects)
+    // Check meta override first for production backend URL
     const meta = document.querySelector('meta[name="api-base"]');
     if (meta?.content?.trim()) {
         return meta.content.trim().replace(/\/$/, '');
     }
     
-    // 4) Fallback backend URL
+    // 3) Fallback backend URL for production
     return 'https://cab-9wdp.onrender.com';
 }
 
