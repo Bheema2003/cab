@@ -214,23 +214,26 @@ const IS_PROD_SITE = (() => {
 
 // API base resolution
 function resolveApiBase() {
-    // 1) Always respect meta override if provided
-    const meta = document.querySelector('meta[name="api-base"]');
-    if (meta?.content?.trim()) {
-        return meta.content.trim().replace(/\/$/, '');
-    }
-    
     const hostname = location.hostname;
-    // 2) Local development
+    
+    // 1) Local development - always use localhost API when running locally
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
         return 'http://localhost:3000';
     }
-    // 3) Same-origin proxy on Netlify / custom domain
+    
+    // 2) Same-origin proxy on Netlify / custom domain
     const isNetlify = hostname.endsWith('.netlify.app') || hostname === 'avbcab.netlify.app';
     const isProdDomain = hostname.endsWith('avbcabs.com') || hostname.endsWith('www.avbcabs.com');
     if (isNetlify || isProdDomain) {
         return '';
     }
+    
+    // 3) Check meta override for production/staging environments
+    const meta = document.querySelector('meta[name="api-base"]');
+    if (meta?.content?.trim()) {
+        return meta.content.trim().replace(/\/$/, '');
+    }
+    
     // 4) Fallback backend URL
     return 'https://cab-9wdp.onrender.com';
 }
@@ -257,7 +260,13 @@ function fetchWithTimeout(url, options = {}, timeoutMs = 15000){
 function apiUrl(path){
     const base = API_BASE || '';
     const p = path.startsWith('/') ? path : `/${path}`;
-    return `${base}/api${p}`.replace(/\/+/, '/');
+    let url = `${base}/api${p}`;
+    // Replace multiple consecutive slashes with single slash, but preserve protocol (http:// or https://)
+    // This handles cases like http://localhost:3000//api/bookings -> http://localhost:3000/api/bookings
+    url = url.replace(/([^:])\/\/+/g, '$1/');
+    // Ensure we don't have trailing slashes before query params
+    url = url.replace(/\/(\?|#)/, '$1');
+    return url;
 }
 
 async function apiFetch(path, options){
@@ -350,11 +359,14 @@ async function handleBookingSubmission(formData, formType) {
     }
 }
 
-// Admin modal functions
+// Admin modal functions - Define globally
 function openAdminLoginModal() {
     const modal = document.getElementById('adminLoginModal');
     if (modal) modal.style.display = 'block';
 }
+
+// Make functions globally available
+window.openAdminLoginModal = openAdminLoginModal;
 
 function closeAdminLoginModal() {
     const modal = document.getElementById('adminLoginModal');
@@ -448,8 +460,16 @@ function displayAdminBookings(bookings) {
     `;
 
     bookings.forEach(booking => {
-        const createdDate = new Date(booking.createdAt).toLocaleString();
-        const pickupDate = new Date(booking.pickupDate).toLocaleDateString();
+        // Handle createdAt - could be Date object or ISO string
+        let createdDate = '-';
+        try {
+            createdDate = booking.createdAt ? new Date(booking.createdAt).toLocaleString() : '-';
+        } catch (e) {
+            createdDate = booking.createdAt || '-';
+        }
+        
+        // Handle pickupDate - stored as string (YYYY-MM-DD format)
+        const pickupDate = booking.pickupDate || '-';
         
         tableHTML += `
             <tr>
@@ -458,7 +478,7 @@ function displayAdminBookings(bookings) {
                 <td>${booking.pickupFrom}</td>
                 <td>${booking.destination}</td>
                 <td>${pickupDate}</td>
-                <td>${booking.pickupTime}</td>
+                <td>${booking.pickupTime || '-'}</td>
                 <td>${booking.contactNumber}</td>
                 <td>${createdDate}</td>
                 <td>
@@ -489,9 +509,15 @@ function displayAdminBookings(bookings) {
 function updateAdminStats(bookings) {
     const totalBookings = bookings.length;
     const today = new Date().toDateString();
-    const todayBookings = bookings.filter(booking => 
-        new Date(booking.createdAt).toDateString() === today
-    ).length;
+    const todayBookings = bookings.filter(booking => {
+        try {
+            if (!booking.createdAt) return false;
+            const createdDate = new Date(booking.createdAt);
+            return createdDate.toDateString() === today;
+        } catch (e) {
+            return false;
+        }
+    }).length;
     const airportBookings = bookings.filter(booking => 
         booking.serviceType === 'Airport'
     ).length;
@@ -530,7 +556,7 @@ async function deleteBooking(id) {
     }
 }
 
-// Review System Functions
+// Review System Functions - Define globally
 function openReviewModal() {
     const modal = document.getElementById('reviewModal');
     if (modal) {
@@ -542,12 +568,18 @@ function openReviewModal() {
     }
 }
 
+// Make functions globally available
+window.openReviewModal = openReviewModal;
+
 function closeReviewModal() {
     const modal = document.getElementById('reviewModal');
     if (modal) {
         modal.style.display = 'none';
     }
 }
+
+// Make functions globally available
+window.closeReviewModal = closeReviewModal;
 
 function updateCharCount() {
     const textarea = document.getElementById('comment');
@@ -1172,5 +1204,4 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(checkNewBookingsAndNotify, 60000);
     // Run once at startup
     checkNewBookingsAndNotify();
-}); 
 }); 

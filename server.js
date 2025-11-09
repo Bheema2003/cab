@@ -292,11 +292,13 @@ async function sendWhatsAppNotification(bookingData) {
 // Fallback local JSON storage (if MongoDB unavailable)
 const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'bookings.json');
+const REVIEWS_FILE = path.join(DATA_DIR, 'reviews.json');
 
 function ensureDataFile() {
     try {
         if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
         if (!fs.existsSync(DATA_FILE)) fs.writeFileSync(DATA_FILE, '[]', 'utf-8');
+        if (!fs.existsSync(REVIEWS_FILE)) fs.writeFileSync(REVIEWS_FILE, '[]', 'utf-8');
     } catch (e) {
         console.error('❌ Failed to prepare local data file:', e);
     }
@@ -328,6 +330,33 @@ async function deleteLocalBookingById(id) {
     } catch (e) {
         console.error('❌ Local delete failed:', e);
         return { ok: false, error: e };
+    }
+}
+
+async function saveReviewLocally(reviewData) {
+    ensureDataFile();
+    try {
+        const raw = await fs.promises.readFile(REVIEWS_FILE, 'utf-8');
+        const list = Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : [];
+        const local = { id: `${Date.now()}-${Math.random().toString(36).slice(2,8)}`, ...reviewData, createdAt: new Date().toISOString() };
+        list.push(local);
+        await fs.promises.writeFile(REVIEWS_FILE, JSON.stringify(list, null, 2), 'utf-8');
+        return { ok: true, id: local.id };
+    } catch (e) {
+        console.error('❌ Local review save failed:', e);
+        return { ok: false, error: e };
+    }
+}
+
+async function getLocalReviews() {
+    try {
+        ensureDataFile();
+        const raw = await fs.promises.readFile(REVIEWS_FILE, 'utf-8');
+        const list = Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : [];
+        return list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    } catch (e) {
+        console.error('❌ Local reviews read failed:', e);
+        return [];
     }
 }
 
@@ -449,27 +478,56 @@ app.delete('/api/bookings/:id', async (req, res) => {
 app.post('/api/reviews', async (req, res) => {
     try {
         const reviewData = req.body;
-        const newReview = new Review(reviewData);
-        await newReview.save();
-        console.log('⭐ Review saved:', reviewData);
-        res.json({ success: true, message: 'Review submitted successfully!', reviewId: newReview._id });
+        let savedReview = null;
+        
+        if (!isMongoReady) {
+            const fallback = await saveReviewLocally(reviewData || {});
+            if (fallback.ok) {
+                savedReview = { id: fallback.id, ...reviewData };
+                return res.json({ success: true, message: 'Review submitted successfully!', reviewId: fallback.id });
+            }
+        } else {
+            const newReview = new Review(reviewData);
+            await newReview.save();
+            savedReview = newReview;
+            console.log('⭐ Review saved to MongoDB:', reviewData);
+            return res.json({ success: true, message: 'Review submitted successfully!', reviewId: newReview._id });
+        }
+        res.status(500).json({ success: false, message: 'Failed to submit review' });
     } catch (error) {
-        console.error('❌ Error saving review:', error);
+        console.error('❌ Error saving review, attempting local save:', error?.message || error);
+        const fb = await saveReviewLocally(req.body || {});
+        if (fb.ok) {
+            return res.json({ success: true, message: 'Review submitted successfully!', reviewId: fb.id });
+        }
         res.status(500).json({ success: false, message: 'Failed to submit review', error: error.message });
     }
 });
 
 app.get('/api/reviews', async (req, res) => {
     try {
-        const reviews = await Review.find().sort({ createdAt: -1 }).limit(10);
-        const averageRating = await Review.aggregate([
-            { $group: { _id: null, avgRating: { $avg: '$rating' } } }
-        ]);
+        if (isMongoReady) {
+            const reviews = await Review.find().sort({ createdAt: -1 }).limit(10);
+            const averageRating = await Review.aggregate([
+                { $group: { _id: null, avgRating: { $avg: '$rating' } } }
+            ]);
+            
+            return res.json({ 
+                success: true, 
+                reviews,
+                averageRating: averageRating.length > 0 ? Math.round(averageRating[0].avgRating * 10) / 10 : 0
+            });
+        }
+        
+        // Fallback to local file if Mongo not ready
+        const reviews = await getLocalReviews();
+        const averageRating = reviews.length > 0 ? 
+            reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : 0;
         
         res.json({ 
             success: true, 
-            reviews,
-            averageRating: averageRating.length > 0 ? Math.round(averageRating[0].avgRating * 10) / 10 : 0
+            reviews: reviews.slice(0, 10),
+            averageRating: Math.round(averageRating * 10) / 10
         });
     } catch (error) {
         console.error('❌ Error fetching reviews:', error);
@@ -511,7 +569,21 @@ app.post('/api/test-email', async (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
-    console.log(`📊 MongoDB Atlas: Connected to cluster0.g7du51j.mongodb.net`);
+    console.log(`📊 MongoDB Atlas: ${isMongoReady ? 'Connected' : 'Not connected (using local storage)'}`);
+    console.log(`📧 Email: ${isEmailReady ? 'Ready' : 'Not configured'}`);
+    console.log(`🌐 Frontend Origin: ${FRONTEND_ORIGIN}`);
+    console.log(`\n✅ Server is ready! Open http://localhost:${PORT} in your browser`);
+});
+
+// Handle server errors
+server.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${PORT} is already in use. Please stop the other process or use a different port.`);
+        console.error(`💡 Try: netstat -ano | findstr :${PORT} to find the process using the port`);
+        process.exit(1);
+    } else {
+        console.error('❌ Server error:', error);
+    }
 });
