@@ -168,7 +168,15 @@ const transporter = nodemailer.createTransport({
     auth: {
         user: EMAIL_USER,
         pass: EMAIL_PASS
-    }
+    },
+    // Additional Gmail settings for better reliability
+    tls: {
+        rejectUnauthorized: false
+    },
+    // Connection timeout settings
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 10000,
+    socketTimeout: 10000
 });
 
 let isEmailReady = false;
@@ -212,17 +220,35 @@ setTimeout(() => {
 
 // Email notification function
 async function sendBookingNotification(bookingData) {
+    // Check if email credentials are available
+    if (!EMAIL_USER || !EMAIL_PASS) {
+        console.warn('✉️ Email credentials not configured - skipping email notification');
+        console.warn('   EMAIL_USER:', EMAIL_USER || 'NOT SET');
+        console.warn('   EMAIL_PASS:', EMAIL_PASS ? 'SET (hidden)' : 'NOT SET');
+        console.warn('   💡 To enable emails, set EMAIL_USER and EMAIL_PASS environment variables');
+        return false;
+    }
+
     try {
+        // Try to verify transporter if not already verified, but don't block sending
         if (!isEmailReady) {
-            console.warn('✉️ Skipping email send (transporter not ready)');
-            console.warn('⚠️ Email config check - USER:', EMAIL_USER ? 'Set' : 'Missing', 'PASS:', EMAIL_PASS ? 'Set' : 'Missing');
-            return false;
+            console.log('⚠️ Email transporter not verified yet, attempting to send anyway...');
+            try {
+                await transporter.verify();
+                isEmailReady = true;
+                console.log('✅ Email transporter verified during send attempt');
+            } catch (verifyError) {
+                console.warn('⚠️ Email verification failed, but attempting to send anyway:', verifyError.message);
+            }
         }
         
-        console.log('📧 Attempting to send booking email to:', EMAIL_TO);
+        console.log('📧 Attempting to send booking email...');
+        console.log('   From:', EMAIL_USER);
+        console.log('   To:', EMAIL_TO);
+        console.log('   Booking:', bookingData.customerName || 'N/A', '-', bookingData.serviceType || 'N/A');
         
         const mailOptions = {
-            from: EMAIL_USER,
+            from: `"AVB Cabs" <${EMAIL_USER}>`,
             to: EMAIL_TO,
             subject: '🚕 New Cab Booking Received - AVB Cabs',
             html: `
@@ -241,23 +267,23 @@ async function sendBookingNotification(bookingData) {
                             </tr>` : ''}
                             <tr style="border-bottom: 1px solid #eee;">
                                 <td style="padding: 10px; font-weight: bold; color: #667eea;">Service Type:</td>
-                                <td style="padding: 10px;">${bookingData.serviceType}</td>
+                                <td style="padding: 10px;">${bookingData.serviceType || 'N/A'}</td>
                             </tr>
                             <tr style="border-bottom: 1px solid #eee;">
                                 <td style="padding: 10px; font-weight: bold; color: #667eea;">Pickup From:</td>
-                                <td style="padding: 10px;">${bookingData.pickupFrom}</td>
+                                <td style="padding: 10px;">${bookingData.pickupFrom || 'N/A'}</td>
                             </tr>
                             <tr style="border-bottom: 1px solid #eee;">
                                 <td style="padding: 10px; font-weight: bold; color: #667eea;">Destination:</td>
-                                <td style="padding: 10px;">${bookingData.destination}</td>
+                                <td style="padding: 10px;">${bookingData.destination || 'N/A'}</td>
                             </tr>
                             <tr style="border-bottom: 1px solid #eee;">
                                 <td style="padding: 10px; font-weight: bold; color: #667eea;">Pickup Date:</td>
-                                <td style="padding: 10px;">${bookingData.pickupDate}</td>
+                                <td style="padding: 10px;">${bookingData.pickupDate || 'N/A'}</td>
                             </tr>
                             <tr style="border-bottom: 1px solid #eee;">
                                 <td style="padding: 10px; font-weight: bold; color: #667eea;">Pickup Time:</td>
-                                <td style="padding: 10px;">${bookingData.pickupTime}</td>
+                                <td style="padding: 10px;">${bookingData.pickupTime || 'N/A'}</td>
                             </tr>
                             ${bookingData.returnDate ? `
                             <tr style=\"border-bottom: 1px solid #eee;\">
@@ -266,7 +292,7 @@ async function sendBookingNotification(bookingData) {
                             </tr>` : ''}
                             <tr style="border-bottom: 1px solid #eee;">
                                 <td style="padding: 10px; font-weight: bold; color: #667eea;">Contact Number:</td>
-                                <td style="padding: 10px;">${bookingData.contactNumber}</td>
+                                <td style="padding: 10px;">${bookingData.contactNumber || 'N/A'}</td>
                             </tr>
                             <tr>
                                 <td style="padding: 10px; font-weight: bold; color: #667eea;">Booking Time:</td>
@@ -296,18 +322,28 @@ async function sendBookingNotification(bookingData) {
         console.log('   Message ID:', info.messageId);
         console.log('   To:', EMAIL_TO);
         console.log('   From:', EMAIL_USER);
+        isEmailReady = true; // Mark as ready after successful send
         return true;
     } catch (error) {
         console.error('❌ Email notification failed:', error.message);
         console.error('   Error code:', error.code);
-        console.error('   Error response:', error.response);
-        console.error('   Full error:', error);
+        if (error.response) {
+            console.error('   Error response:', error.response);
+        }
         
-        // Common Gmail errors
+        // Common Gmail errors with helpful messages
         if (error.code === 'EAUTH') {
-            console.error('   ⚠️ Authentication failed - Check EMAIL_USER and EMAIL_PASS environment variables');
+            console.error('   ⚠️ Authentication failed - Invalid email credentials');
+            console.error('   💡 Make sure you are using a Gmail App Password, not your regular password');
+            console.error('   💡 Generate App Password: Google Account → Security → App Passwords');
+            console.error('   💡 EMAIL_USER should be your full Gmail address');
+            console.error('   💡 EMAIL_PASS should be the 16-character App Password (without spaces)');
         } else if (error.code === 'ECONNECTION') {
             console.error('   ⚠️ Connection failed - Check internet connection');
+        } else if (error.code === 'ETIMEDOUT') {
+            console.error('   ⚠️ Connection timeout - Gmail servers may be slow');
+        } else {
+            console.error('   Full error details:', error);
         }
         
         return false;
@@ -626,18 +662,46 @@ app.get('/api/health', async (req, res) => {
 // Test email endpoint (no body needed)
 app.post('/api/test-email', async (req, res) => {
     try {
-        if (!isEmailReady) {
-            return res.status(400).json({ success: false, message: 'Email transporter not ready' });
+        if (!EMAIL_USER || !EMAIL_PASS) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Email credentials not configured',
+                details: {
+                    EMAIL_USER: EMAIL_USER ? 'Set' : 'Missing',
+                    EMAIL_PASS: EMAIL_PASS ? 'Set' : 'Missing'
+                }
+            });
         }
+        
+        console.log('🧪 Test email requested - attempting to send...');
         const info = await transporter.sendMail({
-            from: EMAIL_USER,
+            from: `"AVB Cabs" <${EMAIL_USER}>`,
             to: EMAIL_TO,
             subject: 'AVB Cabs - Test Email',
-            text: 'This is a test email from AVB Cabs server to verify email delivery.'
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2>✅ Test Email Successful!</h2>
+                    <p>This is a test email from AVB Cabs server to verify email delivery.</p>
+                    <p><strong>Server Time:</strong> ${new Date().toLocaleString()}</p>
+                </div>
+            `
         });
-        res.json({ success: true, messageId: info.messageId });
+        console.log('✅ Test email sent successfully! Message ID:', info.messageId);
+        isEmailReady = true; // Mark as ready after successful test
+        res.json({ 
+            success: true, 
+            message: 'Test email sent successfully',
+            messageId: info.messageId,
+            to: EMAIL_TO
+        });
     } catch (e) {
-        res.status(500).json({ success: false, message: e?.message || 'Failed to send test email' });
+        console.error('❌ Test email failed:', e.message);
+        res.status(500).json({ 
+            success: false, 
+            message: e?.message || 'Failed to send test email',
+            error: e.code || 'Unknown error',
+            details: e.code === 'EAUTH' ? 'Authentication failed - Check EMAIL_USER and EMAIL_PASS' : e.message
+        });
     }
 });
 
