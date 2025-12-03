@@ -731,9 +731,9 @@ body {
 }
 
 .route-column ul li {
-    padding: 5px 0;
-    color: #1a202c;
-    border-bottom: 1px solid rgba(26, 32, 44, 0.1);
+    padding: 6px 0;
+    color: #111827;
+    border-bottom: 1px solid #e5e7eb;
 }
 
 .footer-content {
@@ -1288,9 +1288,20 @@ body {
 .slide-text h1 { -webkit-text-fill-color:#fff; color:#fff; text-shadow:0 10px 35px rgba(0,0,0,.55); }
 
 .booking-types { background: transparent; }
-.booking-tab { background: linear-gradient(135deg, rgba(96,165,250,.18), rgba(139,92,246,.18)); color:#e5e7eb; border:2px solid rgba(96,165,250,.35); }
-.booking-tab.active, .booking-tab:hover { background: linear-gradient(135deg, rgba(96,165,250,.28), rgba(139,92,246,.28)); box-shadow:0 10px 30px rgba(96,165,250,.35); border-color:#60a5fa; }
-.booking-tab i { color:#e5e7eb; }
+.booking-tab { 
+    background: #ffffff; 
+    color:#111827; 
+    border:1px solid #bfdbfe; 
+    box-shadow:0 2px 6px rgba(15,23,42,0.08);
+}
+.booking-tab.active, .booking-tab:hover { 
+    background: #2563eb; 
+    color: #f9fafb; 
+    box-shadow:0 6px 14px rgba(37,99,235,0.35); 
+    border-color:#2563eb; 
+}
+.booking-tab i { color:#2563eb; }
+.booking-tab.active i { color:#f9fafb; }
 
 .booking-section { background: transparent; }
 .booking-form {
@@ -1744,6 +1755,26 @@ section, .hero-section, .booking-section, .why-choose-us, .reviews-section, .foo
 }
 
 /* Popup Styles */
+.success-popup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.success-popup {
+    background: rgba(15, 23, 42, 0.95);
+    padding: 2rem;
+    border-radius: 15px;
+    text-align: center;
+    max-width: 420px;
+    width: 90%;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+}
+
 .popup-content {
     display: flex;
     flex-direction: column;
@@ -1753,6 +1784,7 @@ section, .hero-section, .booking-section, .why-choose-us, .reviews-section, .foo
 
 .popup-icon {
     font-size: 3rem;
+    color: #22c55e;
 }
 
 .popup-content h3 {
@@ -1785,4 +1817,194 @@ section, .hero-section, .booking-section, .why-choose-us, .reviews-section, .foo
 .popup-close-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+}
+
+/* =============================================
+   AVB Clean Light Theme Overrides (High Clarity)
+   ============================================= */
+
+/* Simple, light background and clear text */
+body {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+body::before {
+    display: none;
+}
+
+/* Navbar: solid dark for contrast */
+.navbar {
+    background: #0f172a;
+    border-bottom: 1px solid #111827;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.5);
+}
+
+.logo-text,
+.nav-menu a {
+    color: #f9fafb;
+}
+
+/* Hero: light, no heavy effects */
+.hero-section {
+    background: #e5e7eb;
+}
+
+.slide-text h1,
+.hero-section .slide-text h1 {
+    color: #111827 !important;
+    -webkit-text-fill-color: #111827 !important;
+    text-shadow: none;
+}
+
+.hero-section .slide-text p,
+.hero-section .slide-text .contact-info h3,
+.hero-section .slide-text .contact-info p {
+    color: #1f2933;
+    text-shadow: none;
+}
+
+/* Booking section and forms: plain white cards */
+.booking-section {
+    background: #f3f4f6;
+}
+
+.booking-form {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.form-group label {
+    color: #111827;
+}
+
+.input-group input,
+.input-group textarea,
+.input-group select,
+input[type="time"] {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    color: #111827;
+}
+
+.input-group input:focus,
+.input-group textarea:focus,
+.input-group select:focus,
+input[type="time"]:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25);
+}
+
+/* Buttons: simple blue */
+.submit-btn,
+.help-btn,
+.review-btn,
+.admin-login-btn,
+.popup-close-btn {
+    background: #2563eb;
+}
+
+.submit-btn:hover,
+.help-btn:hover,
+.review-btn:hover,
+.admin-login-btn:hover,
+.popup-close-btn:hover {
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35);
+}
+
+/* Cards and footer sections: soft gray/white */
+.benefits-card,
+.help-card,
+.feature-item,
+.route-column,
+.footer-section,
+.info-item,
+.review-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    color: #111827;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+
+.why-choose-us {
+    background: #f9fafb;
+    color: #111827;
+}
+
+.why-choose-us h2::before {
+    background: #2563eb;
+}
+
+.footer {
+    background: #111827;
+    color: #e5e7eb;
+}
+
+.popular-routes {
+    background: #1f2937;
+}
+
+.go-to-top,
+.footer a {
+    color: #60a5fa;
+}
+
+/* Floating action buttons: solid, not gradient */
+.floating-icon.whatsapp {
+    background: #22c55e;
+}
+
+.floating-icon.phone {
+    background: #2563eb;
+}
+
+/* Text clarity tweaks */
+.why-choose-us h2,
+.why-choose-us .subtitle,
+.section-title,
+.popular-routes h3,
+.footer-section h3,
+.route-column h4,
+.info-item h3,
+.reviews-section .section-title {
+    color: #111827;
+}
+
+.subtitle,
+.note,
+.benefits-card li,
+.feature-item p,
+.review-date,
+.rating-text,
+.loading,
+.error,
+.no-bookings,
+.loading-reviews {
+    color: #374151;
+}
+
+.rating-number {
+    color: #111827;
+}
+
+.nav-menu a:hover {
+    color: #bfdbfe;
+}
+
+/* Popular routes: force clear dark text on light cards */
+.popular-routes .route-column {
+    background: #ffffff !important;
+    border: 1px solid #e5e7eb !important;
+    color: #111827 !important;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+
+.popular-routes .route-column h4 {
+    color: #111827 !important;
+}
+
+.popular-routes .route-column ul li {
+    color: #111827 !important;
+    border-bottom: 1px solid #e5e7eb !important;
 }

@@ -60,19 +60,6 @@ function showSuccessPopup(message) {
     // Create popup overlay
     const overlay = document.createElement('div');
     overlay.className = 'success-popup-overlay';
-    overlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.7);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 10000;
-        animation: fadeIn 0.3s ease;
-    `;
 
     // Create popup content
     const popup = document.createElement('div');
@@ -87,26 +74,20 @@ function showSuccessPopup(message) {
             <button class="popup-close-btn">OK</button>
         </div>
     `;
-    popup.style.cssText = `
-        background: rgba(0, 0, 0, 0.6);
-        padding: 2rem;
-        border-radius: 15px;
-        text-align: center;
-        max-width: 400px;
-        margin: 20px;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-        animation: popupSlideIn 0.3s ease;
-    `;
 
     // Add to page
     overlay.appendChild(popup);
     document.body.appendChild(overlay);
 
+    // Ensure viewport is at the top so popup is clearly visible
+    try {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (_) {}
+
     // Close functionality
     const closeBtn = popup.querySelector('.popup-close-btn');
     const closePopup = () => {
-        overlay.style.animation = 'fadeOut 0.3s ease';
-        popup.style.animation = 'popupSlideOut 0.3s ease';
+        // Let CSS handle appearance; just remove the overlay
         setTimeout(() => overlay.remove(), 300);
     };
 
@@ -123,32 +104,34 @@ function showSuccessPopup(message) {
 
 // Form validation
 function validateBookingForm(data, formType) {
-    if (formType === 'Airport') {
-        if (!data.customerName || data.customerName.trim() === '') {
-            showNotification('Please enter your name.', 'error');
-            return false;
-        }
-        if (!data.pickupFrom || data.pickupFrom.trim() === '') {
-            showNotification('Please enter pickup location.', 'error');
-            return false;
-        }
-        
-        if (!data.destination || data.destination.trim() === '') {
-            showNotification('Please enter your drop location.', 'error');
-            return false;
-        }
-        
-        if (!data.contactNumber || data.contactNumber.trim() === '') {
-            showNotification('Please enter your contact number.', 'error');
-            return false;
-        }
-        
-        // Validate phone number format
-        const phoneRegex = /^[6-9]\d{9}$/;
-        if (!phoneRegex.test(data.contactNumber.replace(/\s/g, ''))) {
-            showNotification('Please enter a valid 10-digit contact number.', 'error');
-            return false;
-        }
+    // Name (required for all booking types)
+    if (!data.customerName || data.customerName.trim() === '') {
+        showNotification('Please enter your name.', 'error');
+        return false;
+    }
+
+    // Pickup and destination (required for all booking types)
+    if (!data.pickupFrom || data.pickupFrom.trim() === '') {
+        showNotification('Please enter pickup location.', 'error');
+        return false;
+    }
+    
+    if (!data.destination || data.destination.trim() === '') {
+        showNotification('Please enter your drop location.', 'error');
+        return false;
+    }
+    
+    // Contact number (required for all booking types)
+    if (!data.contactNumber || data.contactNumber.trim() === '') {
+        showNotification('Please enter your contact number.', 'error');
+        return false;
+    }
+    
+    // Validate phone number format
+    const phoneRegex = /^[6-9]\d{9}$/;
+    if (!phoneRegex.test(data.contactNumber.replace(/\s/g, ''))) {
+        showNotification('Please enter a valid 10-digit contact number.', 'error');
+        return false;
     }
     
     // Common validations
@@ -285,7 +268,14 @@ async function handleBookingSubmission(formData, formType) {
     
     try {
         isSubmitting = true;
+        const successMsg = 'Thank you for booking a cab. We will assign a cab for you shortly.';
         showNotification('Submitting booking...', 'info');
+        // Immediately show success popup so user clearly sees confirmation
+        try {
+            showSuccessPopup(successMsg);
+        } catch (e) {
+            console.error('Failed to show success popup:', e);
+        }
         
         // Disable submit button and show loading state
         const submitBtn = document.querySelector(`#${formType.toLowerCase()}Form .submit-btn`);
@@ -307,7 +297,8 @@ async function handleBookingSubmission(formData, formType) {
         const result = await response.json();
 
         if (result.success) {
-            showNotification('Thank you for booking a cab. We will assign a cab for you shortly.', 'success');
+            // Final success toast (popup is already visible)
+            showNotification(successMsg, 'success');
             
             // Reset form with delay to ensure success message is shown
             setTimeout(() => {
@@ -752,7 +743,8 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('a[href^="#"]').forEach(function(anchor){
         anchor.addEventListener('click', function(e){
             const targetId = anchor.getAttribute('href');
-            if (!targetId || targetId === '#') return;
+            // Let the dedicated reviews handler manage #reviews scrolling/modal
+            if (!targetId || targetId === '#' || targetId === '#reviews') return;
             const targetEl = document.querySelector(targetId);
             if (targetEl){
                 e.preventDefault();
@@ -768,7 +760,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Make any "Write a Review" button scroll to the reviews section, then open the modal
+    // Scroll helper with navbar offset
     function scrollToWithOffset(targetSelector){
         const el = typeof targetSelector === 'string' ? document.querySelector(targetSelector) : targetSelector;
         if (!el) return;
@@ -778,12 +770,22 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const reviewsSection = document.getElementById('reviews');
-    document.querySelectorAll('.review-btn, a[href="#reviews"]').forEach(function(btn){
-        btn.addEventListener('click', function(ev){
-            // If this button already has inline onclick to open modal, we still control scroll first
+
+    // REVIEWS nav link: scroll to reviews and open the modal
+    const reviewsNavLink = document.querySelector('a[href="#reviews"]');
+    if (reviewsNavLink) {
+        reviewsNavLink.addEventListener('click', function (ev) {
             ev.preventDefault();
             scrollToWithOffset(reviewsSection || '#reviews');
-            setTimeout(() => { try { openReviewModal(); } catch(_){} }, 400);
+            setTimeout(() => { try { openReviewModal(); } catch (_) {} }, 400);
+        });
+    }
+
+    // "Write a Review" button in the reviews section: just open the modal (already at that section)
+    document.querySelectorAll('.review-btn').forEach(function (btn) {
+        btn.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            try { openReviewModal(); } catch (_) {}
         });
     });
 
