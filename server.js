@@ -159,7 +159,8 @@ const Review = mongoose.model('Review', reviewSchema);
 
 // Email Configuration
 const EMAIL_USER = process.env.EMAIL_USER || 'avbcabz@gmail.com';
-const EMAIL_PASS = process.env.EMAIL_PASS || '';
+// Strip spaces from App Password (Gmail App Passwords are 16 chars without spaces)
+const EMAIL_PASS = (process.env.EMAIL_PASS || '').replace(/\s+/g, '');
 const EMAIL_TO = process.env.EMAIL_TO || EMAIL_USER;
 
 const transporter = nodemailer.createTransport({
@@ -193,6 +194,11 @@ async function verifyEmailTransporter(){
         if (e.code === 'EAUTH') {
             console.error('   ⚠️ Authentication error - Invalid email credentials');
             console.error('   💡 Make sure you are using an App Password, not your regular Gmail password');
+            console.error('   💡 App Password should be 16 characters without spaces');
+        } else if (e.code === 'ECONNECTION') {
+            console.error('   ⚠️ Connection error - Check internet/network connectivity');
+        } else {
+            console.error('   Full error details:', JSON.stringify(e, null, 2));
         }
     }
 }
