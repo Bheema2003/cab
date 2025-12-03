@@ -159,8 +159,8 @@ const Review = mongoose.model('Review', reviewSchema);
 
 // Email Configuration
 const EMAIL_USER = process.env.EMAIL_USER || 'avbcabz@gmail.com';
-// Strip spaces from App Password (Gmail App Passwords are 16 chars without spaces)
-const EMAIL_PASS = (process.env.EMAIL_PASS || '').replace(/\s+/g, '');
+// Remove spaces from App Password (Gmail App Passwords should be used without spaces)
+const EMAIL_PASS = (process.env.EMAIL_PASS || '').replace(/\s/g, '');
 const EMAIL_TO = process.env.EMAIL_TO || EMAIL_USER;
 
 const transporter = nodemailer.createTransport({
@@ -184,6 +184,7 @@ async function verifyEmailTransporter(){
         }
         console.log('🔍 Verifying email transporter...');
         console.log('   Email User:', EMAIL_USER);
+        console.log('   Email To:', EMAIL_TO);
         await transporter.verify();
         isEmailReady = true;
         console.log('✅ Email transporter verified successfully');
@@ -196,13 +197,18 @@ async function verifyEmailTransporter(){
             console.error('   💡 Make sure you are using an App Password, not your regular Gmail password');
             console.error('   💡 App Password should be 16 characters without spaces');
         } else if (e.code === 'ECONNECTION') {
-            console.error('   ⚠️ Connection error - Check internet/network connectivity');
-        } else {
-            console.error('   Full error details:', JSON.stringify(e, null, 2));
+            console.error('   ⚠️ Connection error - Check internet connection');
         }
     }
 }
+// Verify email on startup and retry after 5 seconds if it fails
 verifyEmailTransporter();
+setTimeout(() => {
+    if (!isEmailReady) {
+        console.log('🔄 Retrying email verification...');
+        verifyEmailTransporter();
+    }
+}, 5000);
 
 // Email notification function
 async function sendBookingNotification(bookingData) {
