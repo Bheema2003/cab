@@ -169,8 +169,8 @@ const Review = mongoose.model('Review', reviewSchema);
 // For production (Render): Set EMAIL_USER and EMAIL_PASS in Render environment variables
 const EMAIL_USER = process.env.EMAIL_USER || 'avbcabz@gmail.com';
 // Remove spaces from App Password (Gmail App Passwords should be used without spaces)
-// Default password for localhost testing (replace with your actual App Password)
-const EMAIL_PASS = (process.env.EMAIL_PASS || 'dcegdpgsuwhltqip').replace(/\s/g, '');
+// Default password for localhost testing (App Password: vxxi vtfw zmwp xvow)
+const EMAIL_PASS = (process.env.EMAIL_PASS || 'vxxivtfwzmwpxvow').replace(/\s/g, '');
 const EMAIL_TO = process.env.EMAIL_TO || EMAIL_USER;
 
 // Log email configuration status on startup
@@ -238,58 +238,35 @@ setTimeout(() => {
 // Email notification function
 async function sendBookingNotification(bookingData) {
     // Check if email credentials are available
-    const currentEmailUser = process.env.EMAIL_USER || EMAIL_USER;
-    const currentEmailPass = (process.env.EMAIL_PASS || EMAIL_PASS || '').replace(/\s/g, '');
-    const currentEmailTo = process.env.EMAIL_TO || EMAIL_TO || currentEmailUser;
-    
-    if (!currentEmailUser || !currentEmailPass) {
+    if (!EMAIL_USER || !EMAIL_PASS) {
         console.warn('✉️ Email credentials not configured - skipping email notification');
-        console.warn('   EMAIL_USER:', currentEmailUser || 'NOT SET');
-        console.warn('   EMAIL_PASS:', currentEmailPass ? 'SET (hidden)' : 'NOT SET');
+        console.warn('   EMAIL_USER:', EMAIL_USER || 'NOT SET');
+        console.warn('   EMAIL_PASS:', EMAIL_PASS ? 'SET (hidden)' : 'NOT SET');
         console.warn('   💡 To enable emails, set EMAIL_USER and EMAIL_PASS environment variables');
         return false;
     }
 
-    // Create a fresh transporter with current credentials (in case env vars changed)
-    const currentTransporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: currentEmailUser,
-            pass: currentEmailPass
-        },
-        tls: {
-            rejectUnauthorized: false
-        },
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 10000
-    });
-
     try {
         // Try to verify transporter if not already verified, but don't block sending
         if (!isEmailReady) {
-            console.log('⚠️ Email transporter not verified yet, attempting to verify...');
+            console.log('⚠️ Email transporter not verified yet, attempting to send anyway...');
             try {
-                await currentTransporter.verify();
+                await transporter.verify();
                 isEmailReady = true;
                 console.log('✅ Email transporter verified during send attempt');
             } catch (verifyError) {
                 console.warn('⚠️ Email verification failed, but attempting to send anyway:', verifyError.message);
-                if (verifyError.code === 'EAUTH') {
-                    console.error('   🔴 AUTHENTICATION ERROR - Check your EMAIL_PASS environment variable');
-                    console.error('   💡 Make sure you restarted the server after setting EMAIL_PASS');
-                }
             }
         }
         
         console.log('📧 Attempting to send booking email...');
-        console.log('   From:', currentEmailUser);
-        console.log('   To:', currentEmailTo);
+        console.log('   From:', EMAIL_USER);
+        console.log('   To:', EMAIL_TO);
         console.log('   Booking:', bookingData.customerName || 'N/A', '-', bookingData.serviceType || 'N/A');
         
         const mailOptions = {
-            from: `"AVB Cabs" <${currentEmailUser}>`,
-            to: currentEmailTo,
+            from: `"AVB Cabs" <${EMAIL_USER}>`,
+            to: EMAIL_TO,
             subject: '🚕 New Cab Booking Received - AVB Cabs',
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;">
@@ -357,11 +334,11 @@ async function sendBookingNotification(bookingData) {
             `
         };
 
-        const info = await currentTransporter.sendMail(mailOptions);
+        const info = await transporter.sendMail(mailOptions);
         console.log('✅ Email notification sent successfully!');
         console.log('   Message ID:', info.messageId);
-        console.log('   To:', currentEmailTo);
-        console.log('   From:', currentEmailUser);
+        console.log('   To:', EMAIL_TO);
+        console.log('   From:', EMAIL_USER);
         isEmailReady = true; // Mark as ready after successful send
         return true;
     } catch (error) {
