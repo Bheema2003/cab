@@ -1,3 +1,10 @@
+// Load environment variables from .env file if it exists (for local development)
+try {
+    require('dotenv').config();
+} catch (e) {
+    // dotenv not installed, that's okay - use environment variables directly
+}
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -158,10 +165,20 @@ const reviewSchema = new mongoose.Schema({
 const Review = mongoose.model('Review', reviewSchema);
 
 // Email Configuration
+// For localhost: You can set these in environment variables or create a .env file
+// For production (Render): Set EMAIL_USER and EMAIL_PASS in Render environment variables
 const EMAIL_USER = process.env.EMAIL_USER || 'avbcabz@gmail.com';
 // Remove spaces from App Password (Gmail App Passwords should be used without spaces)
-const EMAIL_PASS = (process.env.EMAIL_PASS || '').replace(/\s/g, '');
+// Default password for localhost testing (replace with your actual App Password)
+const EMAIL_PASS = (process.env.EMAIL_PASS || 'dcegdpgsuwhltqip').replace(/\s/g, '');
 const EMAIL_TO = process.env.EMAIL_TO || EMAIL_USER;
+
+// Log email configuration status on startup
+console.log('\n📧 Email Configuration:');
+console.log('   EMAIL_USER:', EMAIL_USER);
+console.log('   EMAIL_PASS:', EMAIL_PASS ? `${EMAIL_PASS.substring(0, 4)}****` : 'NOT SET');
+console.log('   EMAIL_TO:', EMAIL_TO);
+console.log('   Source:', process.env.EMAIL_USER ? 'Environment Variable' : 'Default/Hardcoded');
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -475,11 +492,20 @@ app.post('/api/bookings', async (req, res) => {
         const bookingData = req.body;
         let savedBooking = null;
         
+        console.log('\n📝 New booking received:', {
+            customerName: bookingData.customerName,
+            serviceType: bookingData.serviceType,
+            pickupFrom: bookingData.pickupFrom,
+            destination: bookingData.destination
+        });
+        
         if (!isMongoReady) {
             const fallback = await saveBookingLocally(bookingData || {});
             if (fallback.ok) {
                 savedBooking = { id: fallback.id, ...bookingData };
+                console.log('💾 Booking saved locally, ID:', fallback.id);
                 // Send email notification
+                console.log('📧 Triggering email notification...');
                 await sendBookingNotification(savedBooking);
                 // Send WhatsApp notification
                 await sendWhatsAppNotification(savedBooking);
@@ -489,9 +515,10 @@ app.post('/api/bookings', async (req, res) => {
             const newBooking = new Booking(bookingData);
             await newBooking.save();
             savedBooking = newBooking;
-            console.log('✅ Booking saved to MongoDB Atlas:', bookingData);
+            console.log('✅ Booking saved to MongoDB Atlas, ID:', newBooking._id);
             
             // Send email notification
+            console.log('📧 Triggering email notification...');
             await sendBookingNotification(savedBooking);
             // Send WhatsApp notification
             await sendWhatsAppNotification(savedBooking);
@@ -707,11 +734,25 @@ app.post('/api/test-email', async (req, res) => {
 
 // Start server
 const server = app.listen(PORT, () => {
+    console.log(`\n${'='.repeat(60)}`);
     console.log(`🚀 Server running on http://localhost:${PORT}`);
-    console.log(`📊 MongoDB Atlas: ${isMongoReady ? 'Connected' : 'Not connected (using local storage)'}`);
-    console.log(`📧 Email: ${isEmailReady ? 'Ready' : 'Not configured'}`);
+    console.log(`📊 MongoDB Atlas: ${isMongoReady ? '✅ Connected' : '⚠️ Not connected (using local storage)'}`);
+    console.log(`📧 Email Status: ${isEmailReady ? '✅ Ready' : '⚠️ Not verified yet'}`);
+    if (EMAIL_USER && EMAIL_PASS) {
+        console.log(`   📮 Email will be sent to: ${EMAIL_TO}`);
+    } else {
+        console.log(`   ⚠️ Email credentials missing - emails will be skipped`);
+    }
     console.log(`🌐 Frontend Origin: ${FRONTEND_ORIGIN}`);
-    console.log(`\n✅ Server is ready! Open http://localhost:${PORT} in your browser`);
+    console.log(`${'='.repeat(60)}\n`);
+    console.log(`✅ Server is ready! Open http://localhost:${PORT} in your browser\n`);
+    
+    // Show email verification status after a short delay
+    setTimeout(() => {
+        if (!isEmailReady && EMAIL_USER && EMAIL_PASS) {
+            console.log('⚠️ Email verification still pending. Emails will be attempted anyway.');
+        }
+    }, 2000);
 });
 
 // Handle server errors
